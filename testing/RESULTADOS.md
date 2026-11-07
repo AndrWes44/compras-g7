@@ -1,9 +1,15 @@
-# Resultado de testing del backend del equipo
+# Resultados de Testing y API Integration
 
-44 pruebas HTTP aprobadas con el backend real del equipo y Express. El cliente DynamoDB fue sustituido por un doble en memoria: no es una conexion real a AWS ni a DynamoDB Local.
+## Pruebas automatizadas aisladas
 
-Cobertura funcional: health, crear/listar, validacion de los cuatro campos de entrada, montos, UUID/fecha/estado PENDING, normalizacion de espacios, paginacion, errores de almacenamiento y veinte creaciones concurrentes.
+44 pruebas HTTP aprobadas contra los handlers reales del backend del equipo y Express, sustituyendo el cliente DynamoDB por un doble en memoria. Comprueban salud, crear/listar, validaciones, montos, paginacion, errores y concurrencia. No necesitan AWS ni una base encendida.
 
-Coleccion actual del equipo: 17 peticiones Postman preparadas para health, creacion/listado y entradas invalidas. Requiere el backend del equipo y DynamoDB Local para probar la persistencia real.
+El verificador de lectura agrega 17 pruebas de validacion de endpoints y evidencia sin hacer conexiones. Suite actual: 61 pruebas automatizadas.
 
-La suite de 365 pruebas de la demo independiente no se presenta como resultado de este backend, que todavia no implementa decisiones ni reglas de aprobacion. La coleccion del motor queda separada como propuesta futura.
+## Integracion real por Wi-Fi
+
+El 7 de noviembre de 2026 se ejecutaron 17 peticiones Postman con Newman contra la API del companero: 43 aserciones aprobadas, sin fallos. Se crearon tres solicitudes (999.99, 1000.00, 1000.01 USD) y se verifico cada documento mediante lectura directa consistente en DynamoDB Local, tabla g7-dev-solicitudes. Las tres comparaciones fueron exactas.
+
+Ver [evidencias de la corrida](evidence/2026-11-07-wifi/README.md). Las creaciones quedaron en PENDING; este backend todavia no implementa asignacion de aprobador ni decisiones. No se verifico reinicio del proceso ni AWS remoto.
+
+Las 365 pruebas de la demo independiente con SQLite corresponden a otro contrato y no se presentan como resultado de este backend.

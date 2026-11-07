@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="Compras G7 - API actual" tests="17" time="1.575">
+  <testsuite name="01 Salud del backend Grupo 7" id="74222e9b-806f-4548-abc8-43fb4f390dbc" timestamp="2026-11-07T13:14:23.377Z" tests="3" failures="0" errors="0" time="0.082">
+    <testcase name="HTTP 200" time="0.082" classname="01SaludDelBackendGrupo7"/>
+    <testcase name="Backend correcto" time="0.082" classname="01SaludDelBackendGrupo7"/>
+    <testcase name="Grupo 7" time="0.082" classname="01SaludDelBackendGrupo7"/>
+  </testsuite>
+  <testsuite name="Crear $999.99" id="4f4ebd47-978b-42ee-89d3-90792e50f5b3" timestamp="2026-11-07T13:14:23.377Z" tests="4" failures="0" errors="0" time="0.224">
+    <testcase name="HTTP 201" time="0.224" classname="Crear99999"/>
+    <testcase name="Monto almacenado" time="0.224" classname="Crear99999"/>
+    <testcase name="Estado PENDING" time="0.224" classname="Crear99999"/>
+    <testcase name="requestId" time="0.224" classname="Crear99999"/>
+  </testsuite>
+  <testsuite name="Consultar listado despues de $999.99" id="40f9e432-498c-4869-826b-60c7bdbc1787" timestamp="2026-11-07T13:14:23.377Z" tests="4" failures="0" errors="0" time="0.293">
+    <testcase name="HTTP 200" time="0.293" classname="ConsultarListadoDespuesDe99999"/>
+    <testcase name="Listado" time="0.293" classname="ConsultarListadoDespuesDe99999"/>
+    <testcase name="Incluye creada" time="0.293" classname="ConsultarListadoDespuesDe99999"/>
+    <testcase name="Total consistente" time="0.293" classname="ConsultarListadoDespuesDe99999"/>
+  </testsuite>
+  <testsuite name="Crear $1000" id="0cf30875-58aa-418f-b581-dcd625d7f0d6" timestamp="2026-11-07T13:14:23.377Z" tests="4" failures="0" errors="0" time="0.272">
+    <testcase name="HTTP 201" time="0.272" classname="Crear1000"/>
+    <testcase name="Monto almacenado" time="0.272" classname="Crear1000"/>
+    <testcase name="Estado PENDING" time="0.272" classname="Crear1000"/>
+    <testcase name="requestId" time="0.272" classname="Crear1000"/>
+  </testsuite>
+  <testsuite name="Consultar listado despues de $1000" id="cc591476-93cb-4b33-bf96-39fe3e7a5e51" timestamp="2026-11-07T13:14:23.377Z" tests="4" failures="0" errors="0" time="0.206">
+    <testcase name="HTTP 200" time="0.206" classname="ConsultarListadoDespuesDe1000"/>
+    <testcase name="Listado" time="0.206" classname="ConsultarListadoDespuesDe1000"/>
+    <testcase name="Incluye creada" time="0.206" classname="ConsultarListadoDespuesDe1000"/>
+    <testcase name="Total consistente" time="0.206" classname="ConsultarListadoDespuesDe1000"/>
+  </testsuite>
+  <testsuite name="Crear $1000.01" id="ff75f773-f7ce-457e-8e41-a40d1affeb81" timestamp="2026-11-07T13:14:23.377Z" tests="4" failures="0" errors="0" time="0.069">
+    <testcase name="HTTP 201" time="0.069" classname="Crear100001"/>
+    <testcase name="Monto almacenado" time="0.069" classname="Crear100001"/>
+    <testcase name="Estado PENDING" time="0.069" classname="Crear100001"/>
+    <testcase name="requestId" time="0.069" classname="Crear100001"/>
+  </testsuite>
+  <testsuite name="Consultar listado despues de $1000.01" id="9d47ba41-7a4b-4278-be27-48fe2f076496" timestamp="2026-11-07T13:14:23.377Z" tests="4" failures="0" errors="0" time="0.048">
+    <testcase name="HTTP 200" time="0.048" classname="ConsultarListadoDespuesDe100001"/>
+    <testcase name="Listado" time="0.048" classname="ConsultarListadoDespuesDe100001"/>
+    <testcase name="Incluye creada" time="0.048" classname="ConsultarListadoDespuesDe100001"/>
+    <testcase name="Total consistente" time="0.048" classname="ConsultarListadoDespuesDe100001"/>
+  </testsuite>
+  <testsuite name="Rechazar descripcion=vacio" id="21355abc-6c84-4962-a27c-23fcf53c77bd" timestamp="2026-11-07T13:14:23.377Z" tests="2" failures="0" errors="0" time="0.024">
+    <testcase name="HTTP 400" time="0.024" classname="RechazarDescripcionVacio"/>
+    <testcase name="Mensaje de validacion" time="0.024" classname="RechazarDescripcionVacio"/>
+  </testsuite>
+  <testsuite name="Rechazar descripcion=null" id="292c6693-47c8-47e7-a8c3-d3dffd047869" timestamp="2026-11-07T13:14:23.377Z" tests="2" failures="0" errors="0" time="0.042">
+    <testcase name="HTTP 400" time="0.042" classname="RechazarDescripcionNull"/>
+    <testcase name="Mensaje de validacion" time="0.042" classname="RechazarDescripcionNull"/>
+  </testsuite>
+  <testsuite name="Rechazar solicitante=vacio" id="5e1ec67c-54a4-4e39-905b-08c25e4cacbd" timestamp="2026-11-07T13:14:23.377Z" tests="2" failures="0" errors="0" time="0.094">
+    <testcase name="HTTP 400" time="0.094" classname="RechazarSolicitanteVacio"/>
+    <testcase name="Mensaje de validacion" time="0.094" classname="RechazarSolicitanteVacio"/>
+  </testsuite>
+  <testsuite name="Rechazar solicitante=null" id="c7d24988-522a-498c-81d7-4e99099ef53b" timestamp="2026-11-07T13:14:23.377Z" tests="2" failures="0" errors="0" time="0.022">
+    <testcase name="HTTP 400" time="0.022" classname="RechazarSolicitanteNull"/>
+    <testcase name="Mensaje de validacion" time="0.022" classname="RechazarSolicitanteNull"/>
+  </testsuite>
+  <testsuite name="Rechazar departamento=vacio" id="623498ff-d885-4855-80d8-5b7d4d340d9f" timestamp="2026-11-07T13:14:23.377Z" tests="2" failures="0" errors="0" time="0.018">
+    <testcase name="HTTP 400" time="0.018" classname="RechazarDepartamentoVacio"/>
+    <testcase name="Mensaje de validacion" time="0.018" classname="RechazarDepartamentoVacio"/>
+  </testsuite>
+  <testsuite name="Rechazar departamento=null" id="f05331da-c29c-4f0a-a7f9-e5125ed1f06b" timestamp="2026-11-07T13:14:23.377Z" tests="2" failures="0" errors="0" time="0.021">
+    <testcase name="HTTP 400" time="0.021" classname="RechazarDepartamentoNull"/>
+    <testcase name="Mensaje de validacion" time="0.021" classname="RechazarDepartamentoNull"/>
+  </testsuite>
+  <testsuite name="Rechazar monto 0" id="3a103263-31e4-4cd7-bb21-091c054d4799" timestamp="2026-11-07T13:14:23.377Z" tests="1" failures="0" errors="0" time="0.037">
+    <testcase name="HTTP 400" time="0.037" classname="RechazarMonto0"/>
+  </testsuite>
+  <testsuite name="Rechazar monto -1" id="c9e33510-60a6-4c3e-a98c-b6a515b4f258" timestamp="2026-11-07T13:14:23.377Z" tests="1" failures="0" errors="0" time="0.042">
+    <testcase name="HTTP 400" time="0.042" classname="RechazarMonto1"/>
+  </testsuite>
+  <testsuite name="Rechazar monto &quot;100&quot;" id="ae3c9fbd-8dc0-48f5-8f9b-4aea091915d8" timestamp="2026-11-07T13:14:23.377Z" tests="1" failures="0" errors="0" time="0.020">
+    <testcase name="HTTP 400" time="0.020" classname="RechazarMontoQuot100Quot"/>
+  </testsuite>
+  <testsuite name="Rechazar monto null" id="6758b8bd-9e00-44a2-936f-65c2ba346106" timestamp="2026-11-07T13:14:23.377Z" tests="1" failures="0" errors="0" time="0.061">
+    <testcase name="HTTP 400" time="0.061" classname="RechazarMontoNull"/>
+  </testsuite>
+</testsuites>

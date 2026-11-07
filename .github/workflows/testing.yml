@@ -16,4 +16,4 @@ jobs:
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
         working-directory: backend
-      - run: node --test testing/api.integration.test.mjs
+      - run: node --test testing/api.integration.test.mjs testing/verify-dynamodb-local.test.mjs
