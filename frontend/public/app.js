@@ -5,7 +5,7 @@
  */
 
 // Estado global de la aplicación
-const state = {
+const state = window.state = {
   currentRole: null, // 'solicitante' | 'gerente' | 'compras'
   currentView: 'login', // 'login' | 'dashboard' | 'solicitudes' | 'nueva_solicitud' | 'aprobaciones' | 'proveedores' | 'proveedor_nuevo' | 'proveedor_editar' | 'detalle_solicitud' | 'recuperar_password' | 'tokens'
   activeFilterCategoria: 'Todos',
@@ -18,28 +18,42 @@ const state = {
   // Proveedor temporal para el modal de eliminación
   proveedorToDelete: null,
 
-  // Datos de usuarios RBAC
+  // Modal global de error o alerta de red
+  globalErrorModal: null, // { title: string, message: string, code?: number, actionText?: string, onAction?: string }
+
+  // Datos de usuarios RBAC oficiales de Amazon Cognito (Grupo 7)
   users: {
     solicitante: {
       name: 'Carlos Mendoza',
       roleTitle: 'Solicitante Departamental',
       initials: 'CM',
       badgeColor: 'bg-blue-600',
-      email: 'carlos@empresa.com'
+      email: 'solicitante@g7.com',
+      cognitoGroup: 'Solicitante'
     },
     gerente: {
       name: 'Ing. Herberth',
       roleTitle: 'Gerente Aprobador',
       initials: 'IH',
       badgeColor: 'bg-emerald-600',
-      email: 'herberth@empresa.com'
+      email: 'gerente@g7.com',
+      cognitoGroup: 'Gerente'
+    },
+    director: {
+      name: 'Director General',
+      roleTitle: 'Director Financiero & Aprobador Alto Monto',
+      initials: 'DG',
+      badgeColor: 'bg-purple-600',
+      email: 'director@g7.com',
+      cognitoGroup: 'Director'
     },
     compras: {
       name: 'Ana Martínez',
       roleTitle: 'Compras & Adquisiciones',
       initials: 'AM',
-      badgeColor: 'bg-blue-600',
-      email: 'ana@empresa.com'
+      badgeColor: 'bg-sky-600',
+      email: 'compras@g7.com',
+      cognitoGroup: 'Compras'
     }
   },
 
@@ -201,10 +215,21 @@ const state = {
   // Formulario temporal de Nueva Solicitud
   nuevaSolicitudForm: {
     descripcion: '',
+    departamento: 'DEP-TI',
     proveedor: '',
     items: [
       { nombre: '', cantidad: 1, precio: 0, subtotal: 0 }
     ]
+  },
+
+  // Estado de integración con API Express
+  apiState: {
+    isConnected: null,
+    isLoading: false,
+    cursor: null,
+    hayMasRegistros: false,
+    totalApi: 0,
+    lastSync: null
   }
 };
 
@@ -289,26 +314,32 @@ function renderLogin() {
         <!-- Divisor con perfiles de prueba RBAC -->
         <div class="relative my-6">
           <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-aura-border"></div></div>
-          <div class="relative flex justify-center text-xs uppercase"><span class="bg-aura-card px-2 text-slate-400 font-semibold tracking-wider">Perfiles de Acceso Rápido (RBAC)</span></div>
+          <div class="relative flex justify-center text-xs uppercase"><span class="bg-aura-card px-2 text-slate-400 font-semibold tracking-wider">Usuarios Oficiales Cognito (G7)</span></div>
         </div>
 
-        <div class="grid grid-cols-3 gap-2">
-          <button onclick="loginAs('solicitante')" class="flex flex-col items-center justify-center p-3 rounded-xl border border-aura-border bg-slate-900/50 hover:bg-slate-900 hover:border-blue-500 transition-all group">
-            <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold mb-1.5 group-hover:scale-110 transition-transform">CM</span>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <button type="button" onclick="seleccionarUsuarioCognito('solicitante@g7.com')" class="flex flex-col items-center justify-center p-2.5 rounded-xl border border-aura-border bg-slate-900/50 hover:bg-slate-900 hover:border-blue-500 transition-all group">
+            <span class="w-7 h-7 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold mb-1 group-hover:scale-110 transition-transform">CM</span>
             <span class="text-xs font-semibold text-slate-200">Solicitante</span>
-            <span class="text-[10px] text-slate-400">Carlos</span>
+            <span class="text-[9px] text-slate-400 truncate max-w-full">solicitante@g7.com</span>
           </button>
 
-          <button onclick="loginAs('gerente')" class="flex flex-col items-center justify-center p-3 rounded-xl border border-aura-border bg-slate-900/50 hover:bg-slate-900 hover:border-emerald-500 transition-all group">
-            <span class="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold mb-1.5 group-hover:scale-110 transition-transform">IH</span>
+          <button type="button" onclick="seleccionarUsuarioCognito('gerente@g7.com')" class="flex flex-col items-center justify-center p-2.5 rounded-xl border border-aura-border bg-slate-900/50 hover:bg-slate-900 hover:border-emerald-500 transition-all group">
+            <span class="w-7 h-7 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold mb-1 group-hover:scale-110 transition-transform">IH</span>
             <span class="text-xs font-semibold text-slate-200">Gerente</span>
-            <span class="text-[10px] text-slate-400">Herberth</span>
+            <span class="text-[9px] text-slate-400 truncate max-w-full">gerente@g7.com</span>
           </button>
 
-          <button onclick="loginAs('compras')" class="flex flex-col items-center justify-center p-3 rounded-xl border border-aura-border bg-slate-900/50 hover:bg-slate-900 hover:border-sky-500 transition-all group">
-            <span class="w-8 h-8 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center text-xs font-bold mb-1.5 group-hover:scale-110 transition-transform">AM</span>
+          <button type="button" onclick="seleccionarUsuarioCognito('director@g7.com')" class="flex flex-col items-center justify-center p-2.5 rounded-xl border border-aura-border bg-slate-900/50 hover:bg-slate-900 hover:border-purple-500 transition-all group">
+            <span class="w-7 h-7 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold mb-1 group-hover:scale-110 transition-transform">DG</span>
+            <span class="text-xs font-semibold text-slate-200">Director</span>
+            <span class="text-[9px] text-slate-400 truncate max-w-full">director@g7.com</span>
+          </button>
+
+          <button type="button" onclick="seleccionarUsuarioCognito('compras@g7.com')" class="flex flex-col items-center justify-center p-2.5 rounded-xl border border-aura-border bg-slate-900/50 hover:bg-slate-900 hover:border-sky-500 transition-all group">
+            <span class="w-7 h-7 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center text-xs font-bold mb-1 group-hover:scale-110 transition-transform">AM</span>
             <span class="text-xs font-semibold text-slate-200">Compras</span>
-            <span class="text-[10px] text-slate-400">Ana</span>
+            <span class="text-[9px] text-slate-400 truncate max-w-full">compras@g7.com</span>
           </button>
         </div>
 
@@ -360,32 +391,35 @@ function renderSidebar() {
   const user = state.users[state.currentRole] || state.users.solicitante;
   const isSolicitante = state.currentRole === 'solicitante';
   const isGerente = state.currentRole === 'gerente';
+  const isDirector = state.currentRole === 'director';
   const isCompras = state.currentRole === 'compras';
 
-  // Ítems de navegación según el rol RBAC
+  // Ítems de navegación según el rol RBAC oficial de Cognito
   let navItems = [];
   if (isSolicitante) {
-    // Figma Oficial: El Solicitante (Carlos) SOLO tiene Dashboard y Solicitudes
+    // Solicitante: Dashboard y Mis Solicitudes
     navItems = [
       { id: 'dashboard', label: 'Dashboard', icon: 'fa-chart-pie', allowed: true },
       { id: 'solicitudes', label: 'Mis Solicitudes', icon: 'fa-table-columns', allowed: true }
     ];
-  } else if (isGerente) {
-    // Gerente (Herberth): Dashboard, Solicitudes, Aprobaciones (con badge) y Proveedores
+  } else if (isGerente || isDirector) {
+    // Gerente y Director: Dashboard, Solicitudes, Aprobaciones (con badge) y Proveedores
     navItems = [
       { id: 'dashboard', label: 'Dashboard', icon: 'fa-chart-pie', allowed: true },
       { id: 'solicitudes', label: 'Solicitudes', icon: 'fa-table-columns', allowed: true },
       { 
         id: 'aprobaciones', 
-        label: 'Aprobaciones', 
+        label: isDirector ? 'Dictamen Alto Monto' : 'Aprobaciones', 
         icon: 'fa-clipboard-check', 
         allowed: true, 
-        badge: state.solicitudes.filter(s => s.estado === 'en_revision').length 
+        badge: isDirector 
+          ? state.solicitudes.filter(s => s.estado === 'en_revision' && s.esAltoMonto).length 
+          : state.solicitudes.filter(s => s.estado === 'en_revision').length 
       },
       { id: 'proveedores', label: 'Proveedores', icon: 'fa-building', allowed: true }
     ];
   } else {
-    // Compras (Ana): Dashboard, Solicitudes, Proveedores y Aprobaciones técnicas
+    // Compras: Dashboard, Solicitudes, Proveedores y Aprobaciones técnicas
     navItems = [
       { id: 'dashboard', label: 'Dashboard', icon: 'fa-chart-pie', allowed: true },
       { id: 'solicitudes', label: 'Solicitudes', icon: 'fa-table-columns', allowed: true },
@@ -467,13 +501,14 @@ function renderSidebar() {
 function renderTopNav() {
   const isSolicitante = state.currentRole === 'solicitante';
   const isGerente = state.currentRole === 'gerente';
+  const isDirector = state.currentRole === 'director';
   const isCompras = state.currentRole === 'compras';
 
   const titles = {
-    dashboard: isSolicitante ? 'Dashboard — Solicitante' : (isGerente ? 'Dashboard — Gerencia' : 'Dashboard — Compras & Adquisiciones'),
+    dashboard: isSolicitante ? 'Dashboard — Solicitante' : (isDirector ? 'Dashboard — Dirección General' : (isGerente ? 'Dashboard — Gerencia' : 'Dashboard — Compras & Adquisiciones')),
     solicitudes: isSolicitante ? 'Mis Solicitudes' : 'Tablero Kanban de Solicitudes',
     nueva_solicitud: 'Nueva Solicitud de Compra',
-    aprobaciones: 'Bandeja de Dictamen y Aprobaciones',
+    aprobaciones: isDirector ? 'Dictamen Alto Monto' : 'Bandeja de Dictamen y Aprobaciones',
     proveedores: 'Catálogo Oficial de Proveedores',
     proveedor_nuevo: 'Registrar Nuevo Proveedor',
     proveedor_editar: 'Editar Proveedor',
@@ -481,14 +516,27 @@ function renderTopNav() {
     tokens: 'Tokens de Diseño & Guía Visual'
   };
 
+  const statusIndicator = state.apiState.isConnected === true
+    ? `<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30" title="API Backend activa"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>API Online</span>`
+    : state.apiState.isConnected === false
+    ? `<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30" title="API no detectada, operando con respaldo local"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>Modo Respaldo</span>`
+    : '';
+
   return `
     <header class="h-16 px-8 border-b border-aura-border flex items-center justify-between shrink-0 bg-aura-canvas/80 backdrop-blur sticky top-0 z-20">
-      <div>
-        <h2 class="text-base font-bold text-white tracking-tight">${titles[state.currentView] || 'AURA Compras'}</h2>
-        <p class="text-[11px] text-slate-400">Sistema Corporativo v2.0 • Modo Oscuro</p>
+      <div class="flex items-center gap-3">
+        <div>
+          <h2 class="text-base font-bold text-white tracking-tight">${titles[state.currentView] || 'AURA Compras'}</h2>
+          <p class="text-[11px] text-slate-400">Sistema Corporativo v2.0 • Modo Oscuro</p>
+        </div>
+        ${statusIndicator}
       </div>
 
       <div class="flex items-center gap-3">
+        <button onclick="recargarSolicitudesApi()" title="Sincronizar con API Express" class="p-2 text-slate-400 hover:text-white hover:bg-slate-800/60 rounded-lg text-xs border border-aura-border transition-colors ${state.apiState.isLoading ? 'animate-spin text-blue-400' : ''}">
+          <i class="fa-solid fa-rotate"></i>
+        </button>
+
         ${isSolicitante && state.currentView === 'solicitudes' ? `
           <button onclick="navigateTo('nueva_solicitud')" class="py-2 px-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow-md shadow-blue-600/30 transition-all flex items-center gap-2">
             <i class="fa-solid fa-plus text-[10px]"></i>
@@ -502,8 +550,6 @@ function renderTopNav() {
             <span>Nuevo Proveedor</span>
           </button>
         ` : ''}
-
-        
       </div>
     </header>
   `;
@@ -539,6 +585,7 @@ function renderMainContent() {
 function renderDashboard() {
   const isSolicitante = state.currentRole === 'solicitante';
   const isGerente = state.currentRole === 'gerente';
+  const isDirector = state.currentRole === 'director';
   const isCompras = state.currentRole === 'compras';
 
   // Filtrado de solicitudes según el rol
@@ -622,7 +669,10 @@ function renderDashboard() {
       <!-- Tabla de Solicitudes Recientes -->
       <div class="bg-aura-card border border-aura-border rounded-xl overflow-hidden shadow-lg">
         <div class="p-4 border-b border-aura-border flex items-center justify-between">
-          <h4 class="text-xs font-bold text-white uppercase tracking-wider">Actividad Reciente</h4>
+          <div class="flex items-center gap-2">
+            <h4 class="text-xs font-bold text-white uppercase tracking-wider">Actividad Reciente</h4>
+            ${state.apiState.isLoading ? '<span class="text-[10px] text-blue-400 animate-pulse"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Actualizando...</span>' : ''}
+          </div>
           <button onclick="navigateTo('solicitudes')" class="text-xs text-blue-400 hover:text-blue-300 font-medium">Ver todas en Kanban →</button>
         </div>
 
@@ -665,6 +715,7 @@ function renderDashboard() {
 function renderKanban() {
   const isSolicitante = state.currentRole === 'solicitante';
   const isGerente = state.currentRole === 'gerente';
+  const isDirector = state.currentRole === 'director';
 
   // Reglas RBAC para el tablero Kanban:
   // - Solicitante (Carlos): Ve borradores en Pendiente (2)
@@ -706,7 +757,24 @@ function renderKanban() {
   ];
 
   return `
-    <div class="h-full flex flex-col">
+    <div class="h-full flex flex-col space-y-3">
+      <!-- Barra de estado y paginación DynamoDB -->
+      <div class="flex items-center justify-between px-1 text-xs">
+        <div class="flex items-center gap-2">
+          <span class="text-slate-400 font-medium">Mostrando <strong class="text-white">${items.length}</strong> solicitudes</span>
+          ${state.apiState.totalApi ? `<span class="text-slate-500">• Total en DynamoDB: ${state.apiState.totalApi}</span>` : ''}
+          ${state.apiState.isLoading ? '<span class="text-blue-400 animate-pulse ml-2"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Sincronizando con AWS...</span>' : ''}
+        </div>
+        <div class="flex items-center gap-2">
+          ${state.apiState.hayMasRegistros ? `
+            <button onclick="cargarSiguientePagina()" class="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow transition-all flex items-center gap-1.5">
+              <span>Cargar más</span>
+              <i class="fa-solid fa-arrow-down text-[10px]"></i>
+            </button>
+          ` : ''}
+        </div>
+      </div>
+
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
         ${columns.map(col => {
           const colItems = items.filter(col.filter);
@@ -787,17 +855,30 @@ function renderNuevaSolicitud() {
       <form onsubmit="handleCrearSolicitud(event)" class="space-y-6">
         <div>
           <label class="block text-xs font-semibold text-slate-300 mb-1.5">Descripción General del Requerimiento</label>
-          <input type="text" id="solicitud-desc" required value="${form.descripcion}" placeholder="Ej. Material y suministros para oficina del área administrativa" class="w-full px-3.5 py-2.5 bg-aura-input border border-aura-border rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500">
+          <input type="text" id="solicitud-desc" required value="${form.descripcion}" oninput="actualizarCampoForm('descripcion', this.value)" placeholder="Ej. Material y suministros para oficina del área administrativa" class="w-full px-3.5 py-2.5 bg-aura-input border border-aura-border rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500">
         </div>
 
-        <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Proveedor Sugerido / Seleccionado</label>
-          <select id="solicitud-prov" required class="w-full px-3.5 py-2.5 bg-aura-input border border-aura-border rounded-lg text-xs text-slate-100 focus:outline-none focus:border-blue-500">
-            <option value="">-- Seleccionar Proveedor --</option>
-            ${state.proveedores.map(p => `
-              <option value="${p.nombre}" ${form.proveedor === p.nombre ? 'selected' : ''}>${p.nombre} (${p.categoria})</option>
-            `).join('')}
-          </select>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Departamento Solicitante</label>
+            <select id="solicitud-dep" required onchange="actualizarCampoForm('departamento', this.value)" class="w-full px-3.5 py-2.5 bg-aura-input border border-aura-border rounded-lg text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+              <option value="DEP-TI" ${form.departamento === 'DEP-TI' ? 'selected' : ''}>DEP-TI (Tecnología e Información)</option>
+              <option value="DEP-ADM" ${form.departamento === 'DEP-ADM' ? 'selected' : ''}>DEP-ADM (Administración General)</option>
+              <option value="DEP-FIN" ${form.departamento === 'DEP-FIN' ? 'selected' : ''}>DEP-FIN (Finanzas y Contabilidad)</option>
+              <option value="DEP-OPER" ${form.departamento === 'DEP-OPER' ? 'selected' : ''}>DEP-OPER (Operaciones)</option>
+              <option value="DEP-RH" ${form.departamento === 'DEP-RH' ? 'selected' : ''}>DEP-RH (Recursos Humanos)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Proveedor Sugerido / Seleccionado</label>
+            <select id="solicitud-prov" required onchange="actualizarCampoForm('proveedor', this.value)" class="w-full px-3.5 py-2.5 bg-aura-input border border-aura-border rounded-lg text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+              <option value="">-- Seleccionar Proveedor --</option>
+              ${state.proveedores.map(p => `
+                <option value="${p.nombre}" ${form.proveedor === p.nombre ? 'selected' : ''}>${p.nombre} (${p.categoria})</option>
+              `).join('')}
+            </select>
+          </div>
         </div>
 
         <!-- Tabla de Ítems Cotizados -->
@@ -1053,9 +1134,29 @@ function renderProveedores() {
 
 // 6. DETALLE DE SOLICITUD
 function renderDetalleSolicitud() {
-  const item = state.solicitudes.find(s => s.id === state.selectedSolicitudId) || state.solicitudes[0];
+  const item = state.solicitudes.find(s => s.id === state.selectedSolicitudId);
   const isSolicitante = state.currentRole === 'solicitante';
   const isGerente = state.currentRole === 'gerente';
+  const isDirector = state.currentRole === 'director';
+  const canDictaminar = (isGerente && !item.esAltoMonto) || isDirector;
+
+  if (!item) {
+    return `
+      <div class="max-w-xl mx-auto my-12 bg-aura-card border border-aura-border rounded-2xl p-8 text-center space-y-4 shadow-2xl">
+        <div class="w-12 h-12 mx-auto rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl">
+          <i class="fa-solid fa-magnifying-glass"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-white mb-1">Solicitud no encontrada (404)</h3>
+          <p class="text-xs text-slate-400">El identificador <strong class="text-white">${state.selectedSolicitudId}</strong> no existe en el registro de DynamoDB o fue eliminado.</p>
+        </div>
+        <button onclick="navigateTo('solicitudes')" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg shadow transition-all inline-flex items-center gap-2">
+          <i class="fa-solid fa-arrow-left text-[10px]"></i>
+          <span>Regresar al Kanban</span>
+        </button>
+      </div>
+    `;
+  }
 
   return `
     <div class="max-w-4xl mx-auto space-y-6">
@@ -1073,6 +1174,12 @@ function renderDetalleSolicitud() {
               <span>Alto Monto</span>
             </span>
           ` : ''}
+          ${item.executionArn ? `
+            <span class="px-2 py-1 rounded text-[10px] font-mono bg-purple-500/15 text-purple-300 border border-purple-500/30 flex items-center gap-1" title="${item.executionArn}">
+              <i class="fa-solid fa-bolt text-[9px]"></i>
+              <span>Step Functions</span>
+            </span>
+          ` : ''}
         </div>
       </div>
 
@@ -1080,7 +1187,10 @@ function renderDetalleSolicitud() {
       <div class="bg-aura-card border border-aura-border rounded-2xl p-6 shadow-2xl space-y-6">
         <div class="flex items-start justify-between border-b border-aura-border pb-4">
           <div>
-            <div class="text-xs font-mono text-blue-400 font-bold mb-1">${item.id}</div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-xs font-mono text-blue-400 font-bold">${item.id}</span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-aura-border font-medium">${item.departamento || 'DEP-TI'}</span>
+            </div>
             <h3 class="text-lg font-bold text-white mb-1">${item.descripcion}</h3>
             ${item.estado === 'borrador' 
   ? `<p class="text-xs text-amber-400 font-medium"><i class="fa-solid fa-pencil mr-1 text-[10px]"></i>Borrador guardado localmente el ${item.fecha} por <strong class="text-slate-200">${item.solicitante}</strong> (Aún no enviado a revisión)</p>`
@@ -1115,12 +1225,12 @@ function renderDetalleSolicitud() {
                 </tr>
               </thead>
               <tbody class="divide-y divide-aura-border text-slate-200">
-                ${item.items.map(it => `
+                ${(item.items || []).map(it => `
                   <tr>
-                    <td class="py-2.5 px-3 font-medium">${it.nombre}</td>
-                    <td class="py-2.5 px-3 text-center">${it.cantidad}</td>
-                    <td class="py-2.5 px-3 text-right font-mono">$${it.precio.toFixed(2)}</td>
-                    <td class="py-2.5 px-3 text-right font-mono font-bold text-white">$${it.subtotal.toFixed(2)}</td>
+                    <td class="py-2.5 px-3 font-medium">${it.nombre || 'Partida'}</td>
+                    <td class="py-2.5 px-3 text-center">${it.cantidad || 1}</td>
+                    <td class="py-2.5 px-3 text-right font-mono">$${Number(it.precio || 0).toFixed(2)}</td>
+                    <td class="py-2.5 px-3 text-right font-mono font-bold text-white">$${Number(it.subtotal || ((it.cantidad || 1) * (it.precio || 0))).toFixed(2)}</td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -1199,8 +1309,8 @@ function renderDetalleSolicitud() {
           </div>
         ` : ''}
 
-        <!-- Botones de Acción de Dictamen (si el usuario es Gerente y está en revisión) -->
-        ${isGerente && item.estado === 'en_revision' ? `
+        <!-- Botones de Acción de Dictamen (Gerente para monto <= 1000, Director para alto monto) -->
+        ${canDictaminar && item.estado === 'en_revision' ? `
           <div class="pt-4 border-t border-aura-border flex items-center justify-end gap-3">
             <button onclick="dictaminarSolicitud('${item.id}', 'rechazado')" class="px-4 py-2 rounded-lg bg-red-600/80 hover:bg-red-600 text-xs font-semibold text-white shadow transition-all">
               Rechazar Solicitud
@@ -1426,6 +1536,36 @@ function renderBadgeProveedor(estado) {
 
 // ----------------- MODALES -----------------
 function renderModal() {
+  if (state.globalErrorModal) {
+    const err = state.globalErrorModal;
+    return `
+      <div class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-aura-card border border-aura-border w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
+          <div class="w-12 h-12 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center text-xl">
+            <i class="fa-solid ${err.code === 401 || err.code === 403 ? 'fa-user-shield' : 'fa-triangle-exclamation'}"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <h3 class="text-base font-bold text-white">${err.title || 'Error de Operación'}</h3>
+              ${err.code ? `<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-800 text-slate-300 border border-aura-border">HTTP ${err.code}</span>` : ''}
+            </div>
+            <p class="text-xs text-slate-400 leading-relaxed">${err.message}</p>
+          </div>
+          <div class="pt-2 flex items-center justify-end gap-3">
+            <button onclick="cerrarErrorModal()" class="px-4 py-2 rounded-lg border border-aura-border text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-colors">
+              Cerrar
+            </button>
+            ${err.onAction ? `
+              <button onclick="${err.onAction}" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs font-semibold text-white shadow-lg transition-all">
+                ${err.actionText || 'Aceptar'}
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   if (!state.proveedorToDelete) return '';
 
   return `
@@ -1454,6 +1594,16 @@ function renderModal() {
 }
 
 // ----------------- CONTROLADORES Y ACCIONES -----------------
+window.cerrarErrorModal = function() {
+  state.globalErrorModal = null;
+  render();
+};
+
+window.mostrarErrorModal = function({ title, message, code, actionText, onAction }) {
+  state.globalErrorModal = { title, message, code, actionText, onAction };
+  render();
+};
+
 window.navigateTo = function(view) {
   // Guardia estricta de control de acceso RBAC (Figma Oficial)
   if (state.currentRole === 'solicitante' && (view === 'aprobaciones' || view === 'proveedores' || view === 'proveedor_nuevo' || view === 'proveedor_editar')) {
@@ -1464,6 +1614,29 @@ window.navigateTo = function(view) {
   render();
 };
 
+window.seleccionarUsuarioCognito = function(email) {
+  const normalized = email.toLowerCase();
+  let pwd = 'G7_User2026!';
+  
+  if (normalized.includes('solicitante')) {
+    pwd = 'G7_Sol#2026!Sec';
+  } else if (normalized.includes('gerente')) {
+    pwd = 'G7_Ger$2026!Mgr';
+  } else if (normalized.includes('director')) {
+    pwd = 'G7_Dir*2026!Boss';
+  } else if (normalized.includes('compras')) {
+    pwd = 'G7_Com%2026!Buy';
+  }
+
+  const emailInput = document.getElementById('login-email');
+  const passInput = document.getElementById('login-password');
+  if (emailInput && passInput) {
+    emailInput.value = email;
+    passInput.value = pwd;
+    showToast(`Credenciales cargadas para ${email}`, 'info');
+  }
+};
+
 window.loginAs = function(role) {
   state.currentRole = role;
   state.currentView = 'dashboard';
@@ -1471,16 +1644,36 @@ window.loginAs = function(role) {
   render();
 };
 
-window.handleLoginFormSubmit = function(e) {
+window.handleLoginFormSubmit = async function(e) {
   e.preventDefault();
   const email = document.getElementById('login-email').value.trim().toLowerCase();
-  
-  if (email.includes('herberth') || email.includes('gerente')) {
+  const password = document.getElementById('login-password').value;
+
+  if (!email || !password) {
+    showToast('Ingresa correo y contraseña para autenticar con Cognito.', 'warning');
+    return;
+  }
+
+  // Autenticar vía authService
+  if (window.authService) {
+    try {
+      const authUser = await window.authService.login(email, password);
+      loginAs(authUser.role);
+      return;
+    } catch (err) {
+      showToast('Error de autenticación: ' + err.message, 'warning');
+      return;
+    }
+  }
+
+  // Fallback si no está el módulo cargado
+  if (email.includes('director')) {
+    loginAs('director');
+  } else if (email.includes('gerente')) {
     loginAs('gerente');
-  } else if (email.includes('ana') || email.includes('compras')) {
+  } else if (email.includes('compras')) {
     loginAs('compras');
   } else {
-    // Por defecto Solicitante
     loginAs('solicitante');
   }
 };
@@ -1506,37 +1699,246 @@ window.setFilterCategoria = function(cat) {
   render();
 };
 
-window.verDetalleSolicitud = function(id) {
-  state.selectedSolicitudId = id;
-  state.currentView = 'detalle_solicitud';
-  render();
+window.normalizarSolicitudDesdeApi = function(raw) {
+  if (!raw) return null;
+  const requestId = raw.requestId || raw.id || `REQ-${Date.now()}`;
+  const amount = Number(raw.amount !== undefined ? raw.amount : (raw.monto !== undefined ? raw.monto : (raw.total || 0)));
+  const statusRaw = String(raw.status || raw.estado || 'en_revision').toLowerCase();
+  
+  let estadoNormalizado = 'en_revision';
+  if (statusRaw.includes('pending') || statusRaw.includes('revision') || statusRaw.includes('review') || statusRaw.includes('submitted')) {
+    estadoNormalizado = 'en_revision';
+  } else if (statusRaw.includes('reject') || statusRaw.includes('rechaz')) {
+    estadoNormalizado = 'rechazado';
+  } else if (statusRaw.includes('draft') || statusRaw.includes('borrador')) {
+    estadoNormalizado = 'borrador';
+  } else if (statusRaw.includes('approv') || statusRaw.includes('aprob')) {
+    estadoNormalizado = 'aprobado';
+  } else {
+    estadoNormalizado = 'en_revision';
+  }
+
+  let fechaFormateada = 'Hoy';
+  if (raw.createdAt || raw.startDate || raw.fecha) {
+    try {
+      const d = new Date(raw.createdAt || raw.startDate || raw.fecha);
+      if (!isNaN(d.getTime())) {
+        fechaFormateada = d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      } else {
+        fechaFormateada = String(raw.fecha || 'Hoy');
+      }
+    } catch {
+      fechaFormateada = 'Hoy';
+    }
+  }
+
+  const articulosRaw = Array.isArray(raw.articulos) ? raw.articulos : (Array.isArray(raw.items) ? raw.items : null);
+  const itemsNormalizados = articulosRaw && articulosRaw.length > 0
+    ? articulosRaw.map(it => ({
+        nombre: it.nombre || 'Partida',
+        cantidad: Number(it.cantidad || 1),
+        precio: Number(it.precioUnitario !== undefined ? it.precioUnitario : (it.precio || 0)),
+        subtotal: Number(it.subtotal !== undefined ? it.subtotal : (Number(it.cantidad || 1) * Number(it.precioUnitario || it.precio || 0)))
+      }))
+    : [
+        {
+          nombre: raw.description || raw.descripcion || 'Partida general',
+          cantidad: 1,
+          precio: amount,
+          subtotal: amount
+        }
+      ];
+
+  // Resolver nombre de proveedor si viene proveedorId (PRV-001)
+  let proveedorNombre = raw.proveedor || raw.supplier || 'Tech Solutions Global';
+  if (raw.proveedorId && state.proveedores) {
+    const provEncontrado = state.proveedores.find(p => p.id === raw.proveedorId);
+    if (provEncontrado) proveedorNombre = provEncontrado.nombre;
+  }
+
+  // Evaluar alto monto usando el campo de DynamoDB requiereAprobacionDe o el monto
+  const esAltoMonto = raw.requiereAprobacionDe 
+    ? raw.requiereAprobacionDe.toLowerCase() === 'director'
+    : (raw.esAltoMonto !== undefined ? Boolean(raw.esAltoMonto) : amount >= 1000);
+
+  return {
+    id: requestId,
+    requestId: requestId,
+    descripcion: raw.description || raw.descripcion || 'Sin descripción especificada',
+    solicitante: raw.applicant || raw.solicitante || 'usuario@empresa.com',
+    departamento: raw.department || raw.departamento || 'DEP-TI',
+    proveedor: proveedorNombre,
+    proveedorId: raw.proveedorId || null,
+    total: amount,
+    estado: estadoNormalizado,
+    fecha: fechaFormateada,
+    items: itemsNormalizados,
+    comentariosGerente: raw.comments || raw.comentariosGerente || raw.dictamen || '',
+    esAltoMonto: esAltoMonto,
+    aprobador: raw.decidedBy || raw.aprobador || raw.approver || '',
+    executionArn: raw.executionArn || ''
+  };
 };
 
-window.dictaminarSolicitud = function(id, resultado) {
-  if (state.currentRole === 'solicitante') {
-    showToast('Acceso Denegado: Un solicitante no tiene permisos de dictamen.', 'warning');
-    return;
-  }
-  const s = state.solicitudes.find(x => x.id === id);
-  if (s) {
-    s.estado = resultado;
-    s.fechaDictamen = 'Hoy';
-    s.aprobador = state.users[state.currentRole].name;
-    s.comentariosGerente = resultado === 'aprobado' 
-      ? 'Aprobado conforme al presupuesto trimestral asignado.' 
-      : 'Rechazado tras evaluación técnica-financiera: no procede adquisición externa.';
-    showToast(`Solicitud ${id} fue ${resultado.toUpperCase()} con éxito.`, resultado === 'aprobado' ? 'success' : 'warning');
+window.cargarSiguientePagina = async function() {
+  if (!state.apiState.cursor || state.apiState.isLoading) return;
+  await window.recargarSolicitudesApi(state.apiState.cursor);
+};
+
+window.recargarSolicitudesApi = async function(cursor = null) {
+  if (!window.apiService) return;
+  state.apiState.isLoading = true;
+  render();
+
+  try {
+    const res = await window.apiService.getSolicitudes(20, cursor);
+    if (res && Array.isArray(res.solicitudes)) {
+      const normalizadas = res.solicitudes.map(window.normalizarSolicitudDesdeApi);
+      if (cursor) {
+        // Evitar duplicados por requestId
+        const existingIds = new Set(state.solicitudes.map(s => s.id));
+        const nuevos = normalizadas.filter(s => !existingIds.has(s.id));
+        state.solicitudes = [...state.solicitudes, ...nuevos];
+      } else {
+        // Preservar borradores locales creados por el usuario
+        const borradoresLocales = state.solicitudes.filter(s => s.estado === 'borrador');
+        const apiIds = new Set(normalizadas.map(s => s.id));
+        const borradoresUnicos = borradoresLocales.filter(s => !apiIds.has(s.id));
+        state.solicitudes = [...borradoresUnicos, ...normalizadas];
+      }
+      state.apiState.isConnected = true;
+      state.apiState.cursor = res.siguienteCursor || null;
+      state.apiState.hayMasRegistros = Boolean(res.hayMasRegistros);
+      state.apiState.totalApi = res.total || res.solicitudes.length;
+      state.apiState.lastSync = new Date().toLocaleTimeString();
+    }
+  } catch (err) {
+    console.warn('[AURA] No se pudo sincronizar con API de solicitudes:', err.message);
+    state.apiState.isConnected = false;
+  } finally {
+    state.apiState.isLoading = false;
     render();
   }
 };
 
+window.verDetalleSolicitud = async function(id) {
+  state.selectedSolicitudId = id;
+  state.currentView = 'detalle_solicitud';
+  render();
+
+  if (window.apiService && id) {
+    try {
+      const res = await window.apiService.getSolicitudById(id);
+      if (res && res.solicitud) {
+        const itemRemoto = window.normalizarSolicitudDesdeApi(res.solicitud);
+        const idx = state.solicitudes.findIndex(s => s.id === id);
+        if (idx !== -1) {
+          state.solicitudes[idx] = { ...state.solicitudes[idx], ...itemRemoto };
+        } else {
+          state.solicitudes.unshift(itemRemoto);
+        }
+        render();
+      }
+    } catch (err) {
+      if (err.status === 404) {
+        console.warn(`[AURA] Solicitud ${id} no encontrada en DynamoDB (404).`);
+        // Si no existe localmente tampoco, permitimos que la vista 404 se despliegue
+        const existeLocal = state.solicitudes.some(s => s.id === id);
+        if (!existeLocal) {
+          state.selectedSolicitudId = '__NOT_FOUND__';
+          render();
+        }
+      } else {
+        console.warn(`[AURA] Detalle no obtenido para ${id}:`, err.message);
+      }
+    }
+  }
+};
+
+window.dictaminarSolicitud = async function(id, resultado) {
+  if (state.currentRole === 'solicitante') {
+    showToast('Acceso Denegado: Un solicitante no tiene permisos de dictamen.', 'warning');
+    return;
+  }
+
+  const s = state.solicitudes.find(x => x.id === id);
+  if (!s) return;
+
+  const decisionAws = resultado === 'aprobado' ? 'APPROVED' : 'REJECTED';
+  const currentUser = state.users[state.currentRole] || state.users.gerente;
+  const comentarioDefault = resultado === 'aprobado' 
+    ? 'Aprobado conforme al presupuesto asignado y validación de partidas.' 
+    : 'Rechazado tras evaluación técnica-financiera: no procede adquisición externa.';
+
+  // Notificar al usuario e intentar persistencia real en Backend/AWS
+  let persistidoRemoto = false;
+  if (window.apiService && id) {
+    try {
+      await window.apiService.dictaminarSolicitud(id, {
+        decision: decisionAws,
+        comentario: comentarioDefault,
+        aprobador: currentUser.name
+      });
+      persistidoRemoto = true;
+      showToast(`Solicitud ${id} ${resultado.toUpperCase()} y registrada en AWS Step Functions.`, resultado === 'aprobado' ? 'success' : 'warning');
+    } catch (err) {
+      console.warn(`[AURA] Endpoint de dictamen remoto aún no implementado por Backend/Héctor:`, err.message);
+    }
+  }
+
+  // Actualizar estado local
+  s.estado = resultado;
+  s.fechaDictamen = 'Hoy';
+  s.aprobador = currentUser.name;
+  s.comentariosGerente = comentarioDefault;
+
+  if (!persistidoRemoto) {
+    showToast(`Solicitud ${id} fue ${resultado.toUpperCase()} con éxito.`, resultado === 'aprobado' ? 'success' : 'warning');
+  }
+
+  render();
+};
+
+// Generador de ID local incremental no colisionante (Figma Mockup)
+window.generarSiguienteIdLocal = function() {
+  let maxNum = 18;
+  state.solicitudes.forEach(s => {
+    if (s.id && s.id.startsWith('SC-')) {
+      const num = parseInt(s.id.replace('SC-', ''), 10);
+      if (!isNaN(num) && num > maxNum) {
+        maxNum = num;
+      }
+    }
+  });
+  const siguiente = maxNum + 1;
+  return `SC-${String(siguiente).padStart(4, '0')}`;
+};
+
+window.actualizarCampoForm = function(campo, valor) {
+  state.nuevaSolicitudForm[campo] = valor;
+};
+
 // Manipulación de ítems en nueva solicitud
 window.agregarFilaItem = function() {
+  const descEl = document.getElementById('solicitud-desc');
+  const depEl = document.getElementById('solicitud-dep');
+  const provEl = document.getElementById('solicitud-prov');
+  if (descEl) state.nuevaSolicitudForm.descripcion = descEl.value;
+  if (depEl) state.nuevaSolicitudForm.departamento = depEl.value;
+  if (provEl) state.nuevaSolicitudForm.proveedor = provEl.value;
+
   state.nuevaSolicitudForm.items.push({ nombre: '', cantidad: 1, precio: 0, subtotal: 0 });
   render();
 };
 
 window.eliminarFilaItem = function(idx) {
+  const descEl = document.getElementById('solicitud-desc');
+  const depEl = document.getElementById('solicitud-dep');
+  const provEl = document.getElementById('solicitud-prov');
+  if (descEl) state.nuevaSolicitudForm.descripcion = descEl.value;
+  if (depEl) state.nuevaSolicitudForm.departamento = depEl.value;
+  if (provEl) state.nuevaSolicitudForm.proveedor = provEl.value;
+
   state.nuevaSolicitudForm.items.splice(idx, 1);
   render();
 };
@@ -1550,16 +1952,45 @@ window.actualizarItem = function(idx, campo, valor) {
   render();
 };
 
+// Persistencia Local de Borradores (Fase 8)
+window.cargarBorradoresLocales = function() {
+  try {
+    const raw = localStorage.getItem('AURA_DRAFTS');
+    if (raw) {
+      const drafts = JSON.parse(raw);
+      if (Array.isArray(drafts)) {
+        // Filtrar para evitar colisiones
+        const draftIds = new Set(drafts.map(d => d.id));
+        state.solicitudes = state.solicitudes.filter(s => !draftIds.has(s.id));
+        state.solicitudes = [...drafts, ...state.solicitudes];
+      }
+    }
+  } catch (e) {
+    console.warn('[AURA] Error al recuperar borradores locales:', e);
+  }
+};
+
+window.persistirBorradoresLocales = function() {
+  try {
+    const borradores = state.solicitudes.filter(s => s.estado === 'borrador');
+    localStorage.setItem('AURA_DRAFTS', JSON.stringify(borradores));
+  } catch (e) {
+    console.warn('[AURA] Error al guardar borradores en localStorage:', e);
+  }
+};
+
 window.guardarBorrador = function() {
   const desc = document.getElementById('solicitud-desc').value.trim() || 'Borrador sin título';
+  const dep = document.getElementById('solicitud-dep')?.value || 'DEP-TI';
   const prov = document.getElementById('solicitud-prov').value || 'Sin asignar';
   const total = state.nuevaSolicitudForm.items.reduce((acc, it) => acc + (it.cantidad * it.precio), 0);
   
-  const nuevoId = `SC-00${state.solicitudes.length + 11}`;
-  state.solicitudes.push({
+  const nuevoId = window.generarSiguienteIdLocal();
+  const nuevoBorrador = {
     id: nuevoId,
     descripcion: desc,
     solicitante: state.users[state.currentRole].name,
+    departamento: dep,
     proveedor: prov,
     total: total,
     estado: 'borrador',
@@ -1567,34 +1998,139 @@ window.guardarBorrador = function() {
     items: [...state.nuevaSolicitudForm.items],
     comentariosGerente: '',
     esAltoMonto: total >= 1000
-  });
+  };
+
+  state.solicitudes.unshift(nuevoBorrador);
+  window.persistirBorradoresLocales();
+
+  // Resetear formulario
+  state.nuevaSolicitudForm = {
+    descripcion: '',
+    departamento: 'DEP-TI',
+    proveedor: '',
+    items: [{ nombre: '', cantidad: 1, precio: 0, subtotal: 0 }]
+  };
 
   showToast(`Borrador ${nuevoId} guardado con éxito.`, 'info');
   navigateTo('solicitudes');
 };
 
-window.handleCrearSolicitud = function(e) {
+window.handleCrearSolicitud = async function(e) {
   e.preventDefault();
   const desc = document.getElementById('solicitud-desc').value.trim();
+  const dep = document.getElementById('solicitud-dep')?.value || 'DEP-TI';
   const prov = document.getElementById('solicitud-prov').value;
   const total = state.nuevaSolicitudForm.items.reduce((acc, it) => acc + (it.cantidad * it.precio), 0);
 
-  const nuevoId = `SC-00${state.solicitudes.length + 11}`;
-  state.solicitudes.unshift({
-    id: nuevoId,
-    descripcion: desc,
-    solicitante: state.users[state.currentRole].name,
-    proveedor: prov,
-    total: total,
-    estado: 'en_revision',
-    fecha: 'Hoy',
-    items: [...state.nuevaSolicitudForm.items],
-    comentariosGerente: '',
-    esAltoMonto: total >= 1000
-  });
+  if (!desc) {
+    showToast('Por favor ingresa una descripción para el requerimiento.', 'warning');
+    return;
+  }
+  if (total <= 0) {
+    showToast('El monto total debe ser mayor que cero.', 'warning');
+    return;
+  }
 
-  showToast(`Solicitud ${nuevoId} enviada a Dictamen.`, 'success');
-  navigateTo('solicitudes');
+  const currentUser = state.users[state.currentRole] || state.users.solicitante;
+  const applicantEmail = currentUser.email || 'carlos@empresa.com';
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const originalBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i><span>Iniciando en AWS...</span>';
+  }
+
+  let enviadoApi = false;
+  // Resolver proveedorId si coincide con el catálogo
+  const provObj = state.proveedores.find(p => p.nombre === prov);
+  const provId = provObj ? provObj.id : 'PRV-001';
+
+  if (window.apiService) {
+    try {
+      const res = await window.apiService.createSolicitud({
+        descripcion: desc,
+        solicitante: applicantEmail,
+        departamento: dep,
+        monto: total,
+        items: state.nuevaSolicitudForm.items,
+        proveedor: prov,
+        proveedorId: provId
+      });
+
+      const nuevoId = res.requestId || `REQ-${Date.now()}`;
+      showToast(`Solicitud ${nuevoId} iniciada en Step Functions (HTTP 202).`, 'success');
+      enviadoApi = true;
+      
+      // Limpiar formulario
+      state.nuevaSolicitudForm = {
+        descripcion: '',
+        departamento: 'DEP-TI',
+        proveedor: '',
+        items: [{ nombre: '', cantidad: 1, precio: 0, subtotal: 0 }]
+      };
+
+      // Agregar inmediatamente al estado local optimista en 'en_revision'
+      const optimista = window.normalizarSolicitudDesdeApi({
+        requestId: nuevoId,
+        description: desc,
+        applicant: applicantEmail,
+        department: dep,
+        amount: total,
+        status: 'PENDING_APPROVAL',
+        items: [...state.nuevaSolicitudForm.items],
+        proveedor: prov
+      });
+      state.solicitudes.unshift(optimista);
+
+      navigateTo('solicitudes');
+      
+      // Polling de confirmación suave con la API
+      setTimeout(async () => {
+        await window.recargarSolicitudesApi();
+      }, 1500);
+    } catch (err) {
+      console.warn('[AURA] Fallo al enviar a la API Express:', err.message);
+      if (!window.AURA_CONFIG || window.AURA_CONFIG.offlineFallback) {
+        showToast('API no disponible; guardando en modo local para no perder el avance.', 'warning');
+      } else {
+        showToast('Error al enviar a API: ' + err.message, 'warning');
+      }
+    }
+  }
+
+  // Fallback si la API no está corriendo
+  if (!enviadoApi) {
+    const nuevoId = window.generarSiguienteIdLocal();
+    state.solicitudes.unshift({
+      id: nuevoId,
+      descripcion: desc,
+      solicitante: currentUser.name,
+      departamento: dep,
+      proveedor: prov,
+      total: total,
+      estado: 'en_revision',
+      fecha: 'Hoy',
+      items: [...state.nuevaSolicitudForm.items],
+      comentariosGerente: '',
+      esAltoMonto: total >= 1000
+    });
+
+    state.nuevaSolicitudForm = {
+      descripcion: '',
+      departamento: 'DEP-TI',
+      proveedor: '',
+      items: [{ nombre: '', cantidad: 1, precio: 0, subtotal: 0 }]
+    };
+
+    showToast(`Solicitud ${nuevoId} registrada en modo local.`, 'info');
+    navigateTo('solicitudes');
+  }
+
+  if (submitBtn) {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = originalBtnHtml;
+  }
 };
 
 // CRUD Proveedor
@@ -1686,15 +2222,51 @@ function showToast(message, type = 'info') {
 
 // Inicialización
 document.addEventListener('DOMContentLoaded', () => {
+  window.cargarBorradoresLocales();
   render();
+  // Intentar sincronización inicial silenciosa con la API Express
+  if (window.apiService) {
+    window.recargarSolicitudesApi();
+  }
 });
 
-window.enviarBorradorAFirma = function(id) {
+window.enviarBorradorAFirma = async function(id) {
   const s = state.solicitudes.find(x => x.id === id);
-  if (s) {
-    s.estado = 'en_revision';
-    s.fecha = 'Hoy';
-    showToast(`Borrador ${id} remitido exitosamente a revisión gerencial.`, 'success');
-    render();
+  if (!s) return;
+
+  const currentUser = state.users[state.currentRole] || state.users.solicitante;
+  const applicantEmail = currentUser.email || 'carlos@empresa.com';
+
+  if (window.apiService) {
+    try {
+      const res = await window.apiService.createSolicitud({
+        descripcion: s.descripcion,
+        solicitante: applicantEmail,
+        departamento: s.departamento || 'DEP-TI',
+        monto: s.total,
+        items: s.items,
+        proveedor: s.proveedor
+      });
+
+      const reqId = res.requestId || `REQ-${Date.now()}`;
+      s.id = reqId;
+      s.requestId = reqId;
+      s.estado = 'en_revision';
+      s.fecha = 'Hoy';
+      s.executionArn = res.executionArn || '';
+
+      window.persistirBorradoresLocales();
+      showToast(`Borrador remitido a AWS Step Functions (${reqId}, HTTP 202).`, 'success');
+      render();
+      return;
+    } catch (err) {
+      console.warn('[AURA] API no disponible al enviar borrador, pasando a modo local:', err.message);
+    }
   }
+
+  s.estado = 'en_revision';
+  s.fecha = 'Hoy';
+  window.persistirBorradoresLocales();
+  showToast(`Borrador ${id} remitido exitosamente a revisión gerencial.`, 'success');
+  render();
 };

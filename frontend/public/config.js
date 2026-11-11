@@ -1,0 +1,65 @@
+/**
+ * AURA Compras - Configuración Centralizada de Entorno
+ * Permite alternar entre backend local, túnel de pruebas o entorno AWS desplegado.
+ */
+
+(function () {
+  // Si estamos en el navegador en un puerto/host específico (ej: localhost:3000),
+  // usar window.location.origin para evitar bloqueos por discrepancia localhost vs 127.0.0.1
+  const browserOrigin = typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin.startsWith('http')
+    ? window.location.origin
+    : 'http://127.0.0.1:3000';
+  const DEFAULT_API_URL = browserOrigin;
+
+  const savedUrl = localStorage.getItem('AURA_API_URL');
+  const savedMode = localStorage.getItem('AURA_OFFLINE_FALLBACK');
+
+  window.AURA_CONFIG = {
+    // URL base de la API Express
+    apiBaseUrl: savedUrl !== null ? savedUrl : DEFAULT_API_URL,
+
+    // Región AWS oficial del proyecto
+    awsRegion: 'us-east-2',
+
+    // Parámetros de Cognito (Héctor entregará los valores)
+    cognito: {
+      userPoolId: localStorage.getItem('AURA_COGNITO_USER_POOL_ID') || '',
+      clientId: localStorage.getItem('AURA_COGNITO_CLIENT_ID') || ''
+    },
+
+    // Modo fallback a simulación si la API no está disponible
+    offlineFallback: savedMode !== null ? savedMode === 'true' : true,
+
+    // Métodos utilitarios para actualizar configuración en caliente
+    setApiBaseUrl(newUrl) {
+      this.apiBaseUrl = newUrl.trim().replace(/\/+$/, '');
+      localStorage.setItem('AURA_API_URL', this.apiBaseUrl);
+      console.log(`[AURA Config] API Base URL actualizada a: ${this.apiBaseUrl}`);
+    },
+
+    setOfflineFallback(enable) {
+      this.offlineFallback = Boolean(enable);
+      localStorage.setItem('AURA_OFFLINE_FALLBACK', String(this.offlineFallback));
+      console.log(`[AURA Config] Modo offline fallback: ${this.offlineFallback}`);
+    },
+
+    setCognitoParams(userPoolId, clientId) {
+      this.cognito.userPoolId = userPoolId;
+      this.cognito.clientId = clientId;
+      localStorage.setItem('AURA_COGNITO_USER_POOL_ID', userPoolId);
+      localStorage.setItem('AURA_COGNITO_CLIENT_ID', clientId);
+    },
+
+    resetDefaults() {
+      localStorage.removeItem('AURA_API_URL');
+      localStorage.removeItem('AURA_OFFLINE_FALLBACK');
+      localStorage.removeItem('AURA_COGNITO_USER_POOL_ID');
+      localStorage.removeItem('AURA_COGNITO_CLIENT_ID');
+      this.apiBaseUrl = DEFAULT_API_URL;
+      this.offlineFallback = true;
+      this.cognito.userPoolId = '';
+      this.cognito.clientId = '';
+      console.log('[AURA Config] Configuración restablecida a valores predeterminados.');
+    }
+  };
+})();
