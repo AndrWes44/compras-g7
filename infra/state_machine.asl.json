@@ -1,0 +1,151 @@
+{
+  "Comment": "Flujo de Aprobaciones Jerárquicas por Monto - Grupo 7 (g7-dev)",
+  "StartAt": "ValidateAndInitWorkflow",
+  "States": {
+    "ValidateAndInitWorkflow": {
+      "Type": "Task",
+      "Resource": "${StartWorkflowFunctionArn}",
+      "Comment": "Valida la solicitud e inserta el registro inicial en DynamoDB en estado PENDING",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.errorInfo",
+          "Next": "HandleWorkflowError"
+        }
+      ],
+      "Next": "EvaluateAmountAndRole"
+    },
+
+    "EvaluateAmountAndRole": {
+      "Type": "Task",
+      "Resource": "${EvaluateAmountFunctionArn}",
+      "Comment": "Evalúa el monto de la solicitud y clasifica el nivel de aprobación",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 2,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.errorInfo",
+          "Next": "HandleWorkflowError"
+        }
+      ],
+      "Next": "RouteByApprovalTier"
+    },
+
+    "RouteByApprovalTier": {
+      "Type": "Choice",
+      "Comment": "Bifurca según el monto: <= 1000 auto-aprobado, <= 5000 supervisor, > 5000 gerencia",
+      "Choices": [
+        {
+          "Variable": "$.approvalTier",
+          "StringEquals": "AUTO_APPROVED",
+          "Next": "PrepareAutoApproval"
+        },
+        {
+          "Variable": "$.approvalTier",
+          "StringEquals": "REQUIRES_SUPERVISOR",
+          "Next": "PrepareSupervisorApproval"
+        },
+        {
+          "Variable": "$.approvalTier",
+          "StringEquals": "REQUIRES_MANAGER",
+          "Next": "PrepareManagerApproval"
+        }
+      ],
+      "Default": "HandleWorkflowError"
+    },
+
+    "PrepareAutoApproval": {
+      "Type": "Pass",
+      "Parameters": {
+        "requestId.$": "$.requestId",
+        "decision": "APPROVED",
+        "approvalTier.$": "$.approvalTier",
+        "decidedBy": "SYSTEM_AUTO_RULE",
+        "comments": "Aprobación automática por monto menor o igual a $1,000 USD."
+      },
+      "Next": "ProcessAndPersistDecision"
+    },
+
+    "PrepareSupervisorApproval": {
+      "Type": "Pass",
+      "Parameters": {
+        "requestId.$": "$.requestId",
+        "decision": "APPROVED",
+        "approvalTier.$": "$.approvalTier",
+        "decidedBy": "SUPERVISOR",
+        "comments": "Aprobado en revisión nivel Supervisor (monto entre $1,000 y $5,000 USD)."
+      },
+      "Next": "ProcessAndPersistDecision"
+    },
+
+    "PrepareManagerApproval": {
+      "Type": "Pass",
+      "Parameters": {
+        "requestId.$": "$.requestId",
+        "decision": "APPROVED",
+        "approvalTier.$": "$.approvalTier",
+        "decidedBy": "GERENCIA_GENERAL",
+        "comments": "Aprobado en revisión de alta dirección (monto mayor a $5,000 USD)."
+      },
+      "Next": "ProcessAndPersistDecision"
+    },
+
+    "ProcessAndPersistDecision": {
+      "Type": "Task",
+      "Resource": "${ProcessDecisionFunctionArn}",
+      "Comment": "Actualiza el estado final y trazabilidad en DynamoDB",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.errorInfo",
+          "Next": "HandleWorkflowError"
+        }
+      ],
+      "End": true
+    },
+
+    "HandleWorkflowError": {
+      "Type": "Pass",
+      "Parameters": {
+        "status": "FAILED",
+        "errorDetails.$": "$.errorInfo",
+        "message": "Fallo crítico en la ejecución del flujo de aprobaciones g7-dev"
+      },
+      "End": true
+    }
+  }
+}

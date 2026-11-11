@@ -1,0 +1,125 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Aprovisionamiento IAM para Desarrollador 4 (DBA) - Entorno g7-dev (Principio de menor privilegio)'
+
+Parameters:
+  DBAUserName:
+    Type: String
+    Default: 'g7-dev-dba-brandon'
+    Description: 'Nombre del usuario IAM para el Desarrollador 4 (DBA)'
+
+Resources:
+  # -------------------------------------------------------------------
+  # 1. Grupo IAM con las políticas restringidas para el DBA
+  # -------------------------------------------------------------------
+  DBAIAMGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: g7-dev-dba-group
+      ManagedPolicyArns:
+        # Requisito 1: CloudShell Full Access
+        - arn:aws:iam::aws:policy/AWSCloudShellFullAccess
+      Policies:
+        # Requisito 2: DynamoDB Mínimo Privilegio
+        - PolicyName: g7-dev-dba-dynamodb-policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: AllowListAllTablesForConsole
+                Effect: Allow
+                Action:
+                  - dynamodb:ListTables
+                Resource: '*'
+              - Sid: AllowManageAndCRUDG7Tables
+                Effect: Allow
+                Action:
+                  # Administración de tablas
+                  - dynamodb:CreateTable
+                  - dynamodb:DescribeTable
+                  - dynamodb:UpdateTable
+                  - dynamodb:DeleteTable
+                  - dynamodb:DescribeTimeToLive
+                  - dynamodb:UpdateTimeToLive
+                  - dynamodb:DescribeContinuousBackups
+                  # Gestión de índices (GSI / LSI)
+                  - dynamodb:CreateBackup
+                  - dynamodb:DescribeLimits
+                  # Gestión de etiquetas
+                  - dynamodb:TagResource
+                  - dynamodb:UntagResource
+                  - dynamodb:ListTagsOfResource
+                  # Operaciones de registros (CRUD)
+                  - dynamodb:PutItem
+                  - dynamodb:GetItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                  - dynamodb:BatchWriteItem
+                  - dynamodb:BatchGetItem
+                Resource:
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/g7-dev-*'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/g7-dev-*/index/*'
+
+        # Requisito 3: CloudFormation restringido al stack g7-dev-base-datos
+        - PolicyName: g7-dev-dba-cloudformation-policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: AllowTemplateValidation
+                Effect: Allow
+                Action:
+                  - cloudformation:ValidateTemplate
+                Resource: '*'
+              - Sid: AllowManageDBStack
+                Effect: Allow
+                Action:
+                  # Gestión de ChangeSets
+                  - cloudformation:CreateChangeSet
+                  - cloudformation:DescribeChangeSet
+                  - cloudformation:ExecuteChangeSet
+                  - cloudformation:DeleteChangeSet
+                  - cloudformation:ListChangeSets
+                  # Gestión del ciclo de vida del stack g7-dev-base-datos
+                  - cloudformation:CreateStack
+                  - cloudformation:UpdateStack
+                  - cloudformation:DescribeStacks
+                  - cloudformation:DescribeStackEvents
+                  - cloudformation:DescribeStackResources
+                  - cloudformation:GetTemplate
+                  - cloudformation:GetTemplateSummary
+                Resource:
+                  - !Sub 'arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/g7-dev-base-datos/*'
+
+        # Política para autogestión de contraseña en consola
+        - PolicyName: g7-dev-dba-self-credentials-policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: AllowSelfPasswordChange
+                Effect: Allow
+                Action:
+                  - iam:ChangePassword
+                  - iam:GetUser
+                Resource:
+                  - !Sub 'arn:aws:iam::${AWS::AccountId}:user/${DBAUserName}'
+
+  # -------------------------------------------------------------------
+  # 2. Usuario IAM asociado al grupo
+  # -------------------------------------------------------------------
+  DBAUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: !Ref DBAUserName
+      Groups:
+        - !Ref DBAIAMGroup
+
+Outputs:
+  DBAUserNameOutput:
+    Description: 'Usuario IAM aprovisionado para el DBA'
+    Value: !Ref DBAUser
+  SignInUrl:
+    Description: 'URL de inicio de sesión de consola AWS'
+    Value: !Sub 'https://${AWS::AccountId}.signin.aws.amazon.com/console'
+  GroupArn:
+    Description: 'ARN del grupo IAM creado'
+    Value: !GetAtt DBAIAMGroup.Arn

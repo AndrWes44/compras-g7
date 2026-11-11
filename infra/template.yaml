@@ -1,0 +1,193 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'Stack g7-dev-step-functions: Orquestación de aprobaciones por monto con Step Functions, Lambda y Budget'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: 'g7-dev'
+    Description: 'Prefijo identificador del ambiente'
+
+  BudgetAlertEmail:
+    Type: String
+    Default: 'alertas-cloud-g7@ejemplo.com'
+    Description: 'Correo electrónico para recibir alertas de costos de AWS Budgets'
+
+  MonthlyBudgetLimitUSD:
+    Type: Number
+    Default: 10
+    Description: 'Presupuesto mensual asignado en USD'
+
+Globals:
+  Function:
+    Runtime: nodejs20.x
+    Timeout: 20
+    MemorySize: 256
+    Environment:
+      Variables:
+        TABLE_NAME: !Sub '${Environment}-solicitudes'
+        NODE_OPTIONS: '--enable-source-maps'
+
+Resources:
+  # ===================================================================
+  # 1. ROL IAM PARA FUNCIONES LAMBDA (Menor Privilegio)
+  # ===================================================================
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${Environment}-lambda-execution-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub '${Environment}-lambda-policy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # Logs en CloudWatch
+              - Sid: AllowCloudWatchLogs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${Environment}-*'
+
+              # Permiso estricto sobre tablas DynamoDB g7-dev-*
+              - Sid: AllowDynamoDBAccess
+                Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:Query
+                Resource: !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Environment}-*'
+
+  # ===================================================================
+  # 2. FUNCIONES LAMBDA (Node.js 20.x)
+  # ===================================================================
+  StartWorkflowFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-start-workflow'
+      CodeUri: ../lambdas/start-workflow/
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Description: 'Inicia el flujo, valida datos y guarda el registro inicial PENDING'
+
+  EvaluateAmountFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-evaluate-amount'
+      CodeUri: ../lambdas/evaluate-amount/
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Description: 'Evalúa el monto según las reglas de negocio y roles'
+
+  ProcessDecisionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-process-decision'
+      CodeUri: ../lambdas/process-decision/
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Description: 'Persiste la aprobación o rechazo en DynamoDB'
+
+  # ===================================================================
+  # 3. ROL IAM PARA LA STEP FUNCTION
+  # ===================================================================
+  StepFunctionExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${Environment}-sfn-execution-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: states.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub '${Environment}-sfn-invoke-lambdas-policy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: AllowInvokeProjectLambdas
+                Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource:
+                  - !GetAtt StartWorkflowFunction.Arn
+                  - !GetAtt EvaluateAmountFunction.Arn
+                  - !GetAtt ProcessDecisionFunction.Arn
+
+  # ===================================================================
+  # 4. MÁQUINA DE ESTADOS (AWS STEP FUNCTIONS)
+  # ===================================================================
+  ApprovalStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Name: !Sub '${Environment}-approval-state-machine'
+      DefinitionUri: state_machine.asl.json
+      DefinitionSubstitutions:
+        StartWorkflowFunctionArn: !GetAtt StartWorkflowFunction.Arn
+        EvaluateAmountFunctionArn: !GetAtt EvaluateAmountFunction.Arn
+        ProcessDecisionFunctionArn: !GetAtt ProcessDecisionFunction.Arn
+      Role: !GetAtt StepFunctionExecutionRole.Arn
+
+  # ===================================================================
+  # 5. CONTROL Y ALERTAS DE COSTOS (AWS BUDGETS)
+  # ===================================================================
+  MonthlyCostBudget:
+    Type: AWS::Budgets::Budget
+    Properties:
+      Budget:
+        BudgetName: !Sub '${Environment}-monthly-cost-control'
+        BudgetLimit:
+          Amount: !Ref MonthlyBudgetLimitUSD
+          Unit: USD
+        TimeUnit: MONTHLY
+        BudgetType: COST
+      NotificationsWithSubscribers:
+        # Alerta al 50%
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: 50
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref BudgetAlertEmail
+        # Alerta al 80%
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: 80
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref BudgetAlertEmail
+        # Alerta al 100%
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: 100
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref BudgetAlertEmail
+
+Outputs:
+  StateMachineArn:
+    Description: 'ARN de la Step Function para invocarla desde el Backend (Dev 2)'
+    Value: !Ref ApprovalStateMachine
+  StartWorkflowLambdaArn:
+    Description: 'ARN de Lambda start-workflow'
+    Value: !GetAtt StartWorkflowFunction.Arn
+  ProcessDecisionLambdaArn:
+    Description: 'ARN de Lambda process-decision'
+    Value: !GetAtt ProcessDecisionFunction.Arn

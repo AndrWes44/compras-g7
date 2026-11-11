@@ -1,0 +1,7 @@
+{
+  "name": "g7-dev-process-decision",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Lambda process-decision para Grupo 7",
+  "main": "index.js"
+}
