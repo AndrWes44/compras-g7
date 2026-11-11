@@ -1615,26 +1615,16 @@ window.navigateTo = function(view) {
 };
 
 window.seleccionarUsuarioCognito = function(email) {
-  const normalized = email.toLowerCase();
-  let pwd = 'G7_User2026!';
-  
-  if (normalized.includes('solicitante')) {
-    pwd = 'G7_Sol#2026!Sec';
-  } else if (normalized.includes('gerente')) {
-    pwd = 'G7_Ger$2026!Mgr';
-  } else if (normalized.includes('director')) {
-    pwd = 'G7_Dir*2026!Boss';
-  } else if (normalized.includes('compras')) {
-    pwd = 'G7_Com%2026!Buy';
-  }
-
   const emailInput = document.getElementById('login-email');
   const passInput = document.getElementById('login-password');
-  if (emailInput && passInput) {
+  if (emailInput) {
     emailInput.value = email;
-    passInput.value = pwd;
-    showToast(`Credenciales cargadas para ${email}`, 'info');
   }
+  if (passInput) {
+    passInput.value = ''; // NUNCA autocompletar contraseñas en código cliente
+    passInput.focus();
+  }
+  showToast(`Usuario seleccionado: ${email}. Ingresa tu contraseña oficial asignada.`, 'info');
 };
 
 window.loginAs = function(role) {

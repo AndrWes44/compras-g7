@@ -15,13 +15,17 @@
     }
 
     /**
-     * Obtiene el token de autenticación actual si existe sesión en Cognito
+     * Obtiene el token de autenticación actual si existe sesión en Cognito.
+     * Siguiendo el contrato de backend: se inyecta accessToken en Authorization: Bearer <token>
+     * con fallback a idToken si solo ese estuviese presente.
      */
     getAuthToken() {
-      if (window.authService && typeof window.authService.getIdToken === 'function') {
+      if (window.authService && typeof window.authService.getAccessToken === 'function') {
+        const access = window.authService.getAccessToken();
+        if (access) return access;
         return window.authService.getIdToken();
       }
-      return localStorage.getItem('AURA_ID_TOKEN') || null;
+      return localStorage.getItem('AURA_ACCESS_TOKEN') || localStorage.getItem('AURA_ID_TOKEN') || null;
     }
 
     /**
@@ -217,8 +221,7 @@
 
     /**
      * 5. Dictaminar Solicitud (Aprobar o Rechazar decisión humana)
-     * Soporta tanto el nuevo flujo PATCH /api/solicitudes/:id/decision (UpdateItem directo en DynamoDB)
-     * como el fallback POST /api/solicitudes/:id/dictamen.
+     * Ruta oficial y exclusiva contra DynamoDB: PATCH /api/solicitudes/:id/decision
      */
     async dictaminarSolicitud(id, { decision, comentario, comments, aprobador, decidedBy, taskToken }) {
       if (!id) throw new Error('ID de solicitud requerido para dictaminar.');
@@ -239,24 +242,11 @@
         ...(taskToken ? { taskToken } : {})
       };
 
-      // Intentar primero con el endpoint oficial PATCH /api/solicitudes/:id/decision
-      try {
-        const res = await this.request(`/api/solicitudes/${encodeURIComponent(id)}/decision`, {
-          method: 'PATCH',
-          body: JSON.stringify(payloadDecision)
-        });
-        return res.data;
-      } catch (patchErr) {
-        // Si el backend aún tiene POST /dictamen, reintentar como fallback
-        if (patchErr.status === 404 || patchErr.status === 405) {
-          const resFallback = await this.request(`/api/solicitudes/${encodeURIComponent(id)}/dictamen`, {
-            method: 'POST',
-            body: JSON.stringify(payloadDecision)
-          });
-          return resFallback.data;
-        }
-        throw patchErr;
-      }
+      const res = await this.request(`/api/solicitudes/${encodeURIComponent(id)}/decision`, {
+        method: 'PATCH',
+        body: JSON.stringify(payloadDecision)
+      });
+      return res.data;
     }
   }
 
