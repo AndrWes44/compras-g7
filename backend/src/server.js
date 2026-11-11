@@ -451,6 +451,9 @@ app.get('/health', (req, res) => {
 });
 
 // ==========================================
+// POST /api/auth/login
+app.use('/api/auth/login', require('./login-cognito'));
+
 // GET /api/auth/me
 // ==========================================
 
