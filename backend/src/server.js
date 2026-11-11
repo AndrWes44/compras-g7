@@ -371,7 +371,10 @@ function puedeVer(solicitud, usuario) {
 // FILTRADO POR ROL EN DYNAMODB
 // ==========================================
 
+
 function filtroUsuario(usuario) {
+  // El departamento de Compras puede consultar
+  // todas las solicitudes.
   if (usuario.roles.includes('Compras')) {
     return {};
   }
@@ -380,6 +383,7 @@ function filtroUsuario(usuario) {
   const nombres = {};
   const valores = {};
 
+  // SOLICITANTE: solamente sus solicitudes.
   if (usuario.roles.includes('Solicitante')) {
     reglas.push('#applicant = :email');
 
@@ -387,9 +391,10 @@ function filtroUsuario(usuario) {
     valores[':email'] = usuario.email;
   }
 
+  // GERENTE: solicitudes hasta $1,000.
   if (usuario.roles.includes('Gerente')) {
     reglas.push(
-      '(#amount > :cero AND #amount <= :limite)'
+      '#amount > :cero AND #amount <= :limite'
     );
 
     nombres['#amount'] = 'amount';
@@ -397,6 +402,7 @@ function filtroUsuario(usuario) {
     valores[':limite'] = 1000;
   }
 
+  // DIRECTOR: solicitudes mayores a $1,000.
   if (usuario.roles.includes('Director')) {
     reglas.push('#amount > :limite');
 
@@ -404,15 +410,34 @@ function filtroUsuario(usuario) {
     valores[':limite'] = 1000;
   }
 
-  return {
-    FilterExpression: reglas
-      .map(regla => `(${regla})`)
-      .join(' OR '),
+  // No generar una expresión vacía.
+  if (reglas.length === 0) {
+    throw new Error(
+      'El usuario no tiene permisos de consulta'
+    );
+  }
 
+  // Evitar paréntesis innecesarios.
+  // Solo agrupar condiciones AND cuando
+  // existen varias reglas conectadas con OR.
+  const expresion =
+    reglas.length === 1
+      ? reglas[0]
+      : reglas
+          .map(regla =>
+            regla.includes(' AND ')
+              ? `(${regla})`
+              : regla
+          )
+          .join(' OR ');
+
+  return {
+    FilterExpression: expresion,
     ExpressionAttributeNames: nombres,
     ExpressionAttributeValues: valores
   };
 }
+
 
 // ==========================================
 // GET /health
