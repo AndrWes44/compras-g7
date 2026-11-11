@@ -1,36 +1,24 @@
 /**
  * Lambda: g7-dev-evaluate-amount
- * Evalúa las reglas de negocio por monto y asigna el rol o nivel jerárquico requerido.
- * Reglas:
- * - amount <= 1000  => AUTO_APPROVED
- * - amount <= 5000  => REQUIRES_SUPERVISOR
- * - amount >  5000  => REQUIRES_MANAGER
+ * Evalúa las reglas de negocio oficiales del Grupo 7:
+ * - Monto <= 1000  => Aprobación requerida por Gerente de Área (ROL-02)
+ * - Monto >  1000  => Aprobación requerida por Director (ROL-03)
  */
 export const handler = async (event) => {
-  console.log("Evaluando monto en evaluate-amount:", JSON.stringify(event, null, 2));
+  console.log("Evaluando asignación jerárquica:", JSON.stringify(event, null, 2));
 
   const amount = Number(event.amount);
-  let approvalTier = "";
-  let requiredRole = "";
+  const requiresManager = amount <= 1000;
 
-  if (amount <= 1000) {
-    approvalTier = "AUTO_APPROVED";
-    requiredRole = "SISTEMA";
-  } else if (amount <= 5000) {
-    approvalTier = "REQUIRES_SUPERVISOR";
-    requiredRole = "SUPERVISOR";
-  } else {
-    approvalTier = "REQUIRES_MANAGER";
-    requiredRole = "GERENCIA";
-  }
-
-  console.log(`Evaluación concluida para ${event.requestId}: Monto=${amount}, Tier=${approvalTier}, Rol=${requiredRole}`);
-
-  return {
+  const evaluationResult = {
     ...event,
     amount,
-    approvalTier,
-    requiredRole,
+    approvalTier: requiresManager ? "REQUIRES_GERENTE" : "REQUIRES_DIRECTOR",
+    requiredRole: requiresManager ? "ROL-02" : "ROL-03",
+    roleName: requiresManager ? "Gerente" : "Director",
     evaluatedAt: new Date().toISOString()
   };
+
+  console.log(`Evaluación concluida para ${event.requestId}: Requiere ${evaluationResult.roleName}`);
+  return evaluationResult;
 };

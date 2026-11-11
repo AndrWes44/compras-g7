@@ -7,14 +7,22 @@ const TABLE_NAME = process.env.TABLE_NAME || "g7-dev-solicitudes";
 
 /**
  * Lambda: g7-dev-start-workflow
- * Valida los parámetros iniciales de la solicitud y crea el registro en estado PENDING.
+ * Valida los datos y persiste la solicitud inicial en estado PENDING.
+ * Incluye ConditionExpression para evitar sobrescribir solicitudes existentes (idempotencia).
  */
 export const handler = async (event) => {
-  console.log("Evento recibido en start-workflow:", JSON.stringify(event, null, 2));
+  console.log("Iniciando registro de solicitud:", JSON.stringify(event, null, 2));
 
-  const { requestId, amount, applicant, department, description } = event;
+  const {
+    requestId,
+    amount,
+    applicant,
+    department,
+    description,
+    articulos,
+    proveedorId
+  } = event;
 
-  // Validación de entradas obligatorias
   if (!requestId || amount === undefined || Number(amount) <= 0) {
     const errorMsg = "Solicitud inválida: 'requestId' y 'amount' (> 0) son obligatorios.";
     console.error(errorMsg, { requestId, amount });
@@ -23,14 +31,18 @@ export const handler = async (event) => {
 
   const timestamp = new Date().toISOString();
   const numericAmount = Number(amount);
+  const nivelRequerido = numericAmount <= 1000 ? "Gerente" : "Director";
 
-  const initialRecord = {
+  const newRecord = {
     requestId,
     amount: numericAmount,
-    applicant: applicant || "SOLICITANTE_NO_ESPECIFICADO",
+    applicant: applicant || "SOLICITANTE_GENERAL",
     department: department || "GENERAL",
-    description: description || "Solicitud de aprobación presupuestaria",
+    description: description || "Solicitud de compra",
+    articulos: articulos || [],
+    proveedorId: proveedorId || "NO_ESPECIFICADO",
     status: "PENDING",
+    requiereAprobacionDe: nivelRequerido,
     createdAt: timestamp,
     updatedAt: timestamp
   };
@@ -39,20 +51,35 @@ export const handler = async (event) => {
     await docClient.send(
       new PutCommand({
         TableName: TABLE_NAME,
-        Item: initialRecord
+        Item: newRecord,
+        // Protege contra sobrescritura si el requestId ya existía previamente
+        ConditionExpression: "attribute_not_exists(requestId)"
       })
     );
-    console.log(`Solicitud ${requestId} registrada en DynamoDB (${TABLE_NAME}) con estado PENDING`);
+
+    console.log(`Solicitud ${requestId} registrada en PENDING. Requiere: ${nivelRequerido}`);
   } catch (error) {
+    if (error.name === "ConditionalCheckFailedException") {
+      console.warn(`La solicitud ${requestId} ya existe en DynamoDB. Omitiendo sobrescritura.`);
+      return {
+        success: false,
+        message: `La solicitud ${requestId} ya existía en el sistema.`,
+        requestId,
+        duplicated: true
+      };
+    }
     console.error("Error al persistir solicitud inicial en DynamoDB:", error);
     throw error;
   }
 
   return {
-    requestId: initialRecord.requestId,
-    amount: initialRecord.amount,
-    applicant: initialRecord.applicant,
-    department: initialRecord.department,
-    status: initialRecord.status
+    success: true,
+    requestId: newRecord.requestId,
+    amount: newRecord.amount,
+    applicant: newRecord.applicant,
+    department: newRecord.department,
+    status: newRecord.status,
+    requiereAprobacionDe: newRecord.requiereAprobacionDe,
+    totalArticulos: newRecord.articulos.length
   };
 };
