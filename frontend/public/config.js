@@ -21,10 +21,10 @@
     // Región AWS oficial del proyecto
     awsRegion: 'us-east-2',
 
-    // Parámetros de Cognito (Héctor entregará los valores)
+    // Parámetros oficiales de Cognito en AWS (us-east-2)
     cognito: {
-      userPoolId: localStorage.getItem('AURA_COGNITO_USER_POOL_ID') || '',
-      clientId: localStorage.getItem('AURA_COGNITO_CLIENT_ID') || ''
+      userPoolId: localStorage.getItem('AURA_COGNITO_USER_POOL_ID') || 'us-east-2_mLXBZVjc5',
+      clientId: localStorage.getItem('AURA_COGNITO_CLIENT_ID') || '2uu105iq0qdd09knlc7cjk61c7'
     },
 
     // Modo fallback a simulación si la API no está disponible
