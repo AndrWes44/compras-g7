@@ -235,6 +235,21 @@ const state = window.state = {
 
 // Renderizador principal
 function render() {
+  // GUIA_PUBLICA_SIN_SESION_G7
+  // La guia es publica y NO utiliza el layout de usuarios autenticados.
+  if (state.currentView === 'tokens') {
+    const appGuia = document.getElementById('app');
+
+    if (!appGuia) return;
+
+    appGuia.innerHTML = `
+      <div class="min-h-screen w-full bg-aura-canvas text-slate-100 px-4 py-8">
+        ${renderTokensVisualGuide()}
+      </div>
+    `;
+
+    return;
+  }
   const app = document.getElementById('app');
   
   if (state.currentView === 'login') {
