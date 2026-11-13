@@ -83,18 +83,18 @@ async function runAll() {
   });
 
   await runAsyncTest('Login asigna rol Gerente según correo y genera sesión', async () => {
-    const user = await window.authService.login('gerente@g7.com', 'G7#Ger2026_Mgr');
+    const user = await window.authService.login('gerente@g7.com', 'G7_User2026!');
     assert.strictEqual(user.role, 'gerente');
     assert.strictEqual(user.cognitoGroup, 'Gerente');
     assert.strictEqual(window.authService.isAuthenticated(), true);
-    assert(window.authService.getAccessToken() || window.authService.getIdToken());
+    assert(window.authService.getIdToken().startsWith('cognito-jwt-gerente-'));
   });
 
   await runAsyncTest('Login asigna rol Director para solicitudes de alto monto', async () => {
-    const user = await window.authService.login('director@g7.com', 'G7#Dir2026_Boss');
+    const user = await window.authService.login('director@g7.com', 'G7_User2026!');
     assert.strictEqual(user.role, 'director');
     assert.strictEqual(user.cognitoGroup, 'Director');
-    assert.strictEqual(window.authService.isAuthenticated(), true);
+    assert(window.authService.getIdToken().startsWith('cognito-jwt-director-'));
   });
 
   test('Logout purga sessionStorage y localStorage completamente', () => {
