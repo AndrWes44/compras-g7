@@ -27,7 +27,8 @@ test("origen S3 exacto permite preflight y conserva autenticacion obligatoria", 
     } });
     assert.equal(preflight.status, 204);
     assert.equal(preflight.headers.get("Access-Control-Allow-Origin"), origin);
-    assert.doesNotMatch(preflight.headers.get("Access-Control-Allow-Methods"), /PUT|DELETE/);
+    assert.doesNotMatch(preflight.headers.get("Access-Control-Allow-Methods"), /PUT/);
+    assert.match(preflight.headers.get("Access-Control-Allow-Methods"), /DELETE/);
     const protectedResponse = await fetch(base + "/api/solicitudes", { headers: { Origin: origin } });
     assert.equal(protectedResponse.status, 401);
     await protectedResponse.json();

@@ -38,7 +38,7 @@ test("API no escribe decisiones de importes historicos invalidos", async () => {
   try {
     const response = await fetch(`http://127.0.0.1:${listener.address().port}/api/solicitudes/REQ-old/decision`, {
       method: "PATCH", headers: { Authorization: "Bearer local-test", "Content-Type": "application/json" },
-      body: JSON.stringify({ decision: "APPROVED" })
+      body: JSON.stringify({ decision: "APPROVED", comentarios: "Aprobación validada" })
     });
     await response.json();
     assert.equal(response.status, 403);

@@ -139,7 +139,7 @@ for (const amount of [1000, 1000.01])
           "PATCH",
           "/api/solicitudes/REQ-test/decision",
           role,
-          { decision: "APPROVED" },
+          { decision: "APPROVED", comentarios: "Aprobación validada" },
         );
         assert.equal(
           r.status,
@@ -211,7 +211,7 @@ test("no decidir compra propia y no leer ajena", () =>
           "PATCH",
           "/api/solicitudes/REQ-own/decision",
           "Gerente",
-          { decision: "APPROVED" },
+          { decision: "APPROVED", comentarios: "Aprobación validada" },
         )
       ).status,
       403,
@@ -392,11 +392,11 @@ test("comentarios distintos en aliases se rechazan", () =>
     );
     assert.equal(r.status, 400);
   }));
-test("no se implementa CRUD de proveedores ni requiere sus tablas", () =>
+test("proveedores sin BUSINESS_TABLE falla cerrado y solicitudes existentes siguen compatibles", () =>
   scenario(async (h) => {
     assert.equal(
       (await h.request("GET", "/api/proveedores", "Compras")).status,
-      404,
+      503,
     );
     assert.equal(
       (await h.request("POST", "/api/solicitudes", "Solicitante", payload))
@@ -602,7 +602,7 @@ test("correo histórico con espacios o mayúsculas nunca permite autoaprobación
       "PATCH",
       "/api/solicitudes/REQ-own-legacy/decision",
       "Gerente",
-      { decision: "APPROVED" },
+      { decision: "APPROVED", comentarios: "Aprobación validada" },
     );
     assert.equal(result.status, 403);
     assert.equal(h.state.requests.get("REQ-own-legacy").status, "PENDING");
