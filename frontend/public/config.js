@@ -28,7 +28,8 @@
     },
 
     // Modo fallback a simulación si la API no está disponible
-    offlineFallback: savedMode !== null ? savedMode === 'true' : true,
+    // En producción en AWS es FALSE para garantizar estricta fidelidad: si AWS falla, se reporta el error real y no se crean registros ficticios.
+    offlineFallback: savedMode !== null ? savedMode === 'true' : false,
 
     // Métodos utilitarios para actualizar configuración en caliente
     setApiBaseUrl(newUrl) {

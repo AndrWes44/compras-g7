@@ -1870,9 +1870,24 @@ window.dictaminarSolicitud = async function(id, resultado) {
         aprobador: currentUser.name
       });
       persistidoRemoto = true;
-      showToast(`Solicitud ${id} ${resultado.toUpperCase()} y registrada en AWS Step Functions.`, resultado === 'aprobado' ? 'success' : 'warning');
+      showToast(`Solicitud ${id} ${resultado.toUpperCase()} y registrada en AWS Step Functions / DynamoDB.`, resultado === 'aprobado' ? 'success' : 'warning');
     } catch (err) {
-      console.warn(`[AURA] Endpoint de dictamen remoto aún no implementado por Backend/Héctor:`, err.message);
+      console.warn(`[AURA] Falla al persistir dictamen en backend/AWS:`, err.message);
+      if (!window.AURA_CONFIG || !window.AURA_CONFIG.offlineFallback) {
+        // En producción: Si AWS falla, no fingir aprobación y avisar al usuario
+        if (typeof window.mostrarErrorModal === 'function') {
+          window.mostrarErrorModal({
+            title: 'Fallo al Dictaminar en AWS',
+            message: `No se pudo registrar la decisión en AWS (${err.message}). Por favor reintenta la operación.`,
+            code: err.status || 500,
+            actionText: 'Entendido',
+            onAction: 'cerrarErrorModal()'
+          });
+        } else {
+          showToast(`Error al dictaminar en AWS: ${err.message}`, 'error');
+        }
+        return; // Interrumpir para no alterar el estado visual local falsamente
+      }
     }
   }
 
@@ -2080,17 +2095,28 @@ window.handleCrearSolicitud = async function(e) {
         await window.recargarSolicitudesApi();
       }, 1500);
     } catch (err) {
-      console.warn('[AURA] Fallo al enviar a la API Express:', err.message);
-      if (!window.AURA_CONFIG || window.AURA_CONFIG.offlineFallback) {
+      console.warn('[AURA] Fallo al enviar a la API Express/AWS:', err.message);
+      if (window.AURA_CONFIG && window.AURA_CONFIG.offlineFallback) {
         showToast('API no disponible; guardando en modo local para no perder el avance.', 'warning');
       } else {
-        showToast('Error al enviar a API: ' + err.message, 'warning');
+        // En producción estricta en AWS: reportar error transparente y NO crear registros simulados
+        if (typeof window.mostrarErrorModal === 'function') {
+          window.mostrarErrorModal({
+            title: 'Fallo de Comunicación con AWS',
+            message: `No fue posible conectar o persistir la solicitud en el backend (${err.message}). Por favor verifica tu conexión o reintenta. Tus datos en el formulario se han conservado.`,
+            code: err.status || 500,
+            actionText: 'Entendido',
+            onAction: 'cerrarErrorModal()'
+          });
+        } else {
+          showToast(`Error al enviar a AWS: ${err.message}`, 'error');
+        }
       }
     }
   }
 
-  // Fallback si la API no está corriendo
-  if (!enviadoApi) {
+  // Fallback a almacenamiento local SOLO si offlineFallback está explícitamente activado (Desarrollo)
+  if (!enviadoApi && window.AURA_CONFIG && window.AURA_CONFIG.offlineFallback) {
     const nuevoId = window.generarSiguienteIdLocal();
     state.solicitudes.unshift({
       id: nuevoId,
