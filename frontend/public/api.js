@@ -2,7 +2,7 @@
  * AURA Compras - Cliente de Servicios API REST
  * Gestiona llamadas HTTP hacia la API Express en AWS API Gateway (Backend c4d9ee1).
  * Soporta timeouts, inyección de Access Token, interceptores 401/403, borradores,
- * proveedores, anulación, aprobaciones y administración de usuarios.
+ * proveedores, anulación, aprobaciones, seguimiento de registro y administración de usuarios.
  */
 
 (function () {
@@ -79,7 +79,7 @@
           error.status = response.status;
           error.data = data;
 
-          // Manejo seguro de 401 y 403
+          // Manejo seguro de 401 Unauthorized (limpiar sesión y redirigir UNA sola vez)
           if (response.status === 401) {
             if (window.authService && typeof window.authService.logout === 'function') {
               window.authService.logout();
@@ -167,8 +167,19 @@
       return res.data;
     }
 
-    async createSolicitud({ descripcion, department, departamento, monto, amount, articulos, items, proveedorId, proveedor }) {
-      const descFinal = (descripcion || '').trim();
+    /**
+     * Consulta el estado de persistencia asíncrona en DynamoDB iniciado por Step Functions
+     * GET /api/solicitudes/:id/registro
+     * Retorna: { estado: 'REGISTERING' | 'PERSISTED' | 'FAILED', requestId, documento?: {...} }
+     */
+    async getSolicitudRegistro(id) {
+      if (!id) throw new Error('Identificador de solicitud requerido.');
+      const res = await this.request(`/api/solicitudes/${encodeURIComponent(id)}/registro`, { method: 'GET' });
+      return res.data;
+    }
+
+    async createSolicitud({ descripcion, description, department, departamento, monto, amount, articulos, items, proveedorId, proveedor }) {
+      const descFinal = (description || descripcion || '').trim();
       if (!descFinal) throw new Error('La descripción es obligatoria.');
       const montoFinal = Number(amount !== undefined ? amount : monto);
       if (!montoFinal || montoFinal <= 0) throw new Error('El monto debe ser mayor que cero.');
@@ -265,7 +276,7 @@
     async updateBorrador(id, patchData, version) {
       const res = await this.request(`/api/borradores/${encodeURIComponent(id)}`, {
         method: 'PATCH',
-        body: JSON.stringify({ ...patchData, version })
+        body: JSON.stringify({ ...patchData, version: Number(version) || 1 })
       });
       return res.data;
     }
@@ -273,7 +284,7 @@
     async deleteBorrador(id, version) {
       const res = await this.request(`/api/borradores/${encodeURIComponent(id)}`, {
         method: 'DELETE',
-        body: JSON.stringify({ version })
+        body: JSON.stringify({ version: Number(version) || 1 })
       });
       return res.data;
     }
@@ -281,7 +292,7 @@
     async enviarBorrador(id, version) {
       const res = await this.request(`/api/borradores/${encodeURIComponent(id)}/enviar`, {
         method: 'POST',
-        body: JSON.stringify({ version })
+        body: JSON.stringify({ version: Number(version) || 1 })
       });
       return res.data;
     }
@@ -310,7 +321,7 @@
     async updateProveedor(id, patchData, version) {
       const res = await this.request(`/api/proveedores/${encodeURIComponent(id)}`, {
         method: 'PATCH',
-        body: JSON.stringify({ ...patchData, version })
+        body: JSON.stringify({ ...patchData, version: Number(version) || 1 })
       });
       return res.data;
     }
@@ -318,7 +329,7 @@
     async deleteProveedor(id, version) {
       const res = await this.request(`/api/proveedores/${encodeURIComponent(id)}`, {
         method: 'DELETE',
-        body: JSON.stringify({ version })
+        body: JSON.stringify({ version: Number(version) || 1 })
       });
       return res.data;
     }
@@ -336,7 +347,7 @@
       if (!sub) throw new Error('sub de usuario requerido.');
       const body = {
         decision,
-        version: version || 1,
+        version: Number(version) || 1,
         comments: (comments || '').trim() || 'Dictamen administrativo'
       };
       if (role && decision === 'APPROVED') {

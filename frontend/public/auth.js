@@ -122,17 +122,36 @@
         throw new Error('El servidor no retornó un token de acceso válido.');
       }
 
-      const rawUser = data.user || {};
-      const primaryRole = (rawUser.role || (Array.isArray(rawUser.roles) && rawUser.roles[0]) || 'solicitante').toLowerCase();
+      const rawUser = data.user || data.usuario || {};
+      
+      let primaryRole = '';
+      if (rawUser.role) {
+        primaryRole = String(rawUser.role).toLowerCase();
+      } else if (Array.isArray(rawUser.roles) && rawUser.roles.length > 0) {
+        primaryRole = String(rawUser.roles[0]).toLowerCase();
+      } else if (Array.isArray(rawUser.groups) && rawUser.groups.length > 0) {
+        const commercialGroup = rawUser.groups.find(g => ['Solicitante', 'Gerente', 'Director', 'Compras'].includes(g));
+        if (commercialGroup) primaryRole = commercialGroup.toLowerCase();
+      }
+
+      const isAdmin = Boolean(rawUser.isAdmin || (Array.isArray(rawUser.roles) && rawUser.roles.includes('Administrador')) || (Array.isArray(rawUser.groups) && rawUser.groups.includes('Administrador')));
+
+      if (!primaryRole) {
+        if (isAdmin) {
+          primaryRole = 'admin';
+        } else {
+          primaryRole = 'solicitante';
+        }
+      }
 
       const user = {
         sub: rawUser.sub || rawUser.id,
         email: rawUser.email || email.trim().toLowerCase(),
         name: rawUser.name || (email.split('@')[0]),
         role: primaryRole,
-        roles: rawUser.roles || [primaryRole],
-        isAdmin: Boolean(rawUser.isAdmin || (Array.isArray(rawUser.roles) && rawUser.roles.includes('Administrador'))),
-        roleTitle: this._getRoleTitle(primaryRole, rawUser.isAdmin)
+        roles: rawUser.roles || rawUser.groups || [primaryRole],
+        isAdmin,
+        roleTitle: this._getRoleTitle(primaryRole, isAdmin)
       };
 
       this.setSession(data.tokens, user);
@@ -142,6 +161,7 @@
     /**
      * Valida la identidad y claims actuales con el backend
      * GET /api/auth/me
+     * Envelope backend c4d9ee1: { success: true, usuario: { sub, email, roles, groups, isAdmin, ... } }
      */
     async getMe() {
       const token = this.getAccessToken();
@@ -164,17 +184,46 @@
       }
 
       const data = await res.json();
-      const rawUser = data.user || data;
-      const primaryRole = (rawUser.role || (Array.isArray(rawUser.roles) && rawUser.roles[0]) || 'solicitante').toLowerCase();
+      // Leer data.usuario del envelope oficial del backend
+      const rawUser = data.usuario || data.user || data;
+
+      if (!rawUser || (!rawUser.sub && !rawUser.userId && !rawUser.id && !rawUser.email && !rawUser.roles && !rawUser.role && !rawUser.groups)) {
+        throw new Error('Respuesta de identidad inválida desde el backend.');
+      }
+
+      let primaryRole = '';
+      if (rawUser.role) {
+        primaryRole = String(rawUser.role).toLowerCase();
+      } else if (Array.isArray(rawUser.roles) && rawUser.roles.length > 0) {
+        const commercialRole = rawUser.roles.find(r => ['solicitante', 'gerente', 'director', 'compras'].includes(String(r).toLowerCase()));
+        primaryRole = commercialRole ? String(commercialRole).toLowerCase() : String(rawUser.roles[0]).toLowerCase();
+      } else if (Array.isArray(rawUser.groups) && rawUser.groups.length > 0) {
+        const commercialGroup = rawUser.groups.find(g => ['solicitante', 'gerente', 'director', 'compras'].includes(String(g).toLowerCase()));
+        if (commercialGroup) primaryRole = String(commercialGroup).toLowerCase();
+      }
+
+      const isAdmin = Boolean(
+        rawUser.isAdmin ||
+        (Array.isArray(rawUser.roles) && rawUser.roles.some(r => String(r).toLowerCase() === 'administrador')) ||
+        (Array.isArray(rawUser.groups) && rawUser.groups.some(g => String(g).toLowerCase() === 'administrador'))
+      );
+
+      if (!primaryRole) {
+        if (isAdmin) {
+          primaryRole = 'admin';
+        } else {
+          throw new Error('La cuenta no posee un rol comercial asignado ante AWS.');
+        }
+      }
 
       const user = {
-        sub: rawUser.sub || rawUser.id,
+        sub: rawUser.sub || rawUser.userId || rawUser.id,
         email: rawUser.email,
-        name: rawUser.name || rawUser.email,
+        name: rawUser.name || (rawUser.email ? rawUser.email.split('@')[0] : 'Usuario'),
         role: primaryRole,
-        roles: rawUser.roles || [primaryRole],
-        isAdmin: Boolean(rawUser.isAdmin || (Array.isArray(rawUser.roles) && rawUser.roles.includes('Administrador'))),
-        roleTitle: this._getRoleTitle(primaryRole, rawUser.isAdmin)
+        roles: rawUser.roles || rawUser.groups || [primaryRole],
+        isAdmin,
+        roleTitle: this._getRoleTitle(primaryRole, isAdmin)
       };
 
       sessionStorage.setItem(this.STORAGE_KEY_USER, JSON.stringify(user));
@@ -268,13 +317,17 @@
     }
 
     _getRoleTitle(role, isAdmin) {
-      if (isAdmin) return 'Administrador de Cuentas';
-      switch (role.toLowerCase()) {
-        case 'gerente': return 'Gerente Aprobador (hasta $1,000)';
-        case 'director': return 'Director General / Financiero (> $1,000)';
-        case 'compras': return 'Compras & Adquisiciones';
-        default: return 'Solicitante Departamental';
+      if (isAdmin && (!role || role === 'admin')) return 'Administrador de Cuentas';
+      const roleLower = String(role || '').toLowerCase();
+      let title = '';
+      switch (roleLower) {
+        case 'gerente': title = 'Gerente Aprobador (hasta $1,000)'; break;
+        case 'director': title = 'Director General / Financiero (> $1,000)'; break;
+        case 'compras': title = 'Compras & Adquisiciones'; break;
+        default: title = 'Solicitante Departamental'; break;
       }
+      if (isAdmin) title += ' (Administrador)';
+      return title;
     }
   }
 

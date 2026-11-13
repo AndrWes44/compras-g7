@@ -1,21 +1,14 @@
 /**
  * AURA Compras - Configuración Centralizada de Entorno
- * Permite alternar entre backend local, túnel de pruebas o entorno AWS desplegado.
+ * Conectado directamente a AWS API Gateway y Amazon Cognito (us-east-2).
+ * Estricta fidelidad en producción: sin modos simulados ni fallback a datos locales.
  */
 
 (function () {
-  // Si estamos en el navegador en un puerto/host específico (ej: localhost:3000),
-  // usar window.location.origin para evitar bloqueos por discrepancia localhost vs 127.0.0.1
-  const browserOrigin = typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin.startsWith('http')
-    ? window.location.origin
-    : 'http://127.0.0.1:3000';
-  const DEFAULT_API_URL = browserOrigin;
-
   // URL oficial definitiva de la API Express en AWS API Gateway
   const AWS_PRODUCTION_API_URL = 'https://6pkbutuqre.execute-api.us-east-2.amazonaws.com';
 
   const savedUrl = localStorage.getItem('AURA_API_URL');
-  const savedMode = localStorage.getItem('AURA_OFFLINE_FALLBACK');
 
   window.AURA_CONFIG = {
     // URL base de la API Express (prioriza la API pública de AWS por defecto)
@@ -30,9 +23,9 @@
       clientId: localStorage.getItem('AURA_COGNITO_CLIENT_ID') || '2uu105iq0qdd09knlc7cjk61c7'
     },
 
-    // Modo fallback a simulación si la API no está disponible
-    // En producción en AWS es FALSE para garantizar estricta fidelidad: si AWS falla, se reporta el error real y no se crean registros ficticios.
-    offlineFallback: savedMode !== null ? savedMode === 'true' : false,
+    // Modo offlineFallback bloqueado estrictamente en false para producción en AWS.
+    // Garantiza que los errores 400, 401, 403, 409, 429 o 5xx se reporten transparentemente sin crear registros locales ficticios.
+    offlineFallback: false,
 
     // Métodos utilitarios para actualizar configuración en caliente
     setApiBaseUrl(newUrl) {
@@ -42,9 +35,10 @@
     },
 
     setOfflineFallback(enable) {
-      this.offlineFallback = Boolean(enable);
-      localStorage.setItem('AURA_OFFLINE_FALLBACK', String(this.offlineFallback));
-      console.log(`[AURA Config] Modo offline fallback: ${this.offlineFallback}`);
+      // Bloqueado en producción para evitar simulación
+      this.offlineFallback = false;
+      localStorage.removeItem('AURA_OFFLINE_FALLBACK');
+      console.warn('[AURA Config] El modo offlineFallback está deshabilitado en este entorno de producción AWS.');
     },
 
     setCognitoParams(userPoolId, clientId) {
