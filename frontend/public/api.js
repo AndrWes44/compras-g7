@@ -1,49 +1,42 @@
 /**
  * AURA Compras - Cliente de Servicios API REST
- * Gestiona llamadas HTTP hacia la API Express (Backend Desarrollador 2).
- * Soporta timeouts, inyección de tokens de autenticación y manejo unificado de errores.
+ * Gestiona llamadas HTTP hacia la API Express en AWS API Gateway (Backend c4d9ee1).
+ * Soporta timeouts, inyección de Access Token, interceptores 401/403, borradores,
+ * proveedores, anulación, aprobaciones y administración de usuarios.
  */
 
 (function () {
   class ApiService {
     constructor() {
-      this.timeoutMs = 12000;
+      this.timeoutMs = 15000;
+      this._isHandling401 = false;
     }
 
     get baseUrl() {
-      return (window.AURA_CONFIG && window.AURA_CONFIG.apiBaseUrl) || 'http://127.0.0.1:3000';
+      return (window.AURA_CONFIG && window.AURA_CONFIG.apiBaseUrl) || 'https://6pkbutuqre.execute-api.us-east-2.amazonaws.com';
     }
 
     /**
-     * Obtiene el token de autenticación actual si existe sesión en Cognito.
-     * Siguiendo el contrato de backend: se inyecta accessToken en Authorization: Bearer <token>
-     * con fallback a idToken si solo ese estuviese presente.
+     * Obtiene exclusivamente el Access Token oficial
      */
     getAuthToken() {
       if (window.authService && typeof window.authService.getAccessToken === 'function') {
-        const access = window.authService.getAccessToken();
-        if (access) return access;
-        return window.authService.getIdToken();
+        return window.authService.getAccessToken();
       }
-      return localStorage.getItem('AURA_ACCESS_TOKEN') || localStorage.getItem('AURA_ID_TOKEN') || null;
+      return sessionStorage.getItem('AURA_ACCESS_TOKEN') || localStorage.getItem('AURA_ACCESS_TOKEN') || null;
     }
 
-    /**
-     * Normaliza y concatena endpoint asegurando que no se dupliquen prefijos /api
-     * si baseUrl ya viene configurada con /api (ej. https://...execute-api.../api)
-     */
     buildUrl(endpoint) {
       const base = this.baseUrl.replace(/\/+$/, '');
       let cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-      
       if (base.endsWith('/api') && cleanEndpoint.startsWith('/api/')) {
-        cleanEndpoint = cleanEndpoint.substring(4); // remover el '/api' repetido
+        cleanEndpoint = cleanEndpoint.substring(4);
       }
       return `${base}${cleanEndpoint}`;
     }
 
     /**
-     * Ejecuta una petición fetch con control de tiempo y encabezados unificados
+     * Petición unificada
      */
     async request(endpoint, options = {}) {
       const url = this.buildUrl(endpoint);
@@ -77,7 +70,7 @@
           data = await response.json().catch(() => null);
         } else {
           const text = await response.text().catch(() => '');
-          data = { message: text };
+          data = text ? { message: text } : null;
         }
 
         if (!response.ok) {
@@ -86,22 +79,32 @@
           error.status = response.status;
           error.data = data;
 
-          // Manejo interceptor global de seguridad y sesión (Fase 9)
+          // Manejo seguro de 401 y 403
           if (response.status === 401) {
+            if (window.authService && typeof window.authService.logout === 'function') {
+              window.authService.logout();
+            }
             if (typeof window !== 'undefined' && typeof window.mostrarErrorModal === 'function') {
               window.mostrarErrorModal({
                 title: 'Sesión Expirada o Inválida',
-                message: 'Tu sesión no es válida ante el backend o ha expirado. Por favor ingresa nuevamente.',
+                message: 'Tu sesión no es válida ante el backend de AWS o ha expirado. Por favor ingresa nuevamente.',
                 code: 401,
                 actionText: 'Ir al Login',
                 onAction: "handleLogout()"
               });
             }
+            if (!this._isHandling401) {
+              this._isHandling401 = true;
+              if (typeof window !== 'undefined' && typeof window.navigateTo === 'function') {
+                window.navigateTo('login');
+              }
+              setTimeout(() => { this._isHandling401 = false; }, 2000);
+            }
           } else if (response.status === 403) {
             if (typeof window !== 'undefined' && typeof window.mostrarErrorModal === 'function') {
               window.mostrarErrorModal({
                 title: 'Acceso No Autorizado',
-                message: 'No posees los privilegios de rol requeridos en AWS para ejecutar esta operación.',
+                message: 'No posees los privilegios requeridos en AWS para ejecutar esta operación.',
                 code: 403,
                 actionText: 'Entendido',
                 onAction: 'cerrarErrorModal()'
@@ -121,7 +124,7 @@
         clearTimeout(timeoutId);
 
         if (err.name === 'AbortError') {
-          const timeoutErr = new Error('Tiempo de espera agotado al conectar con el servidor.');
+          const timeoutErr = new Error('Tiempo de espera agotado al conectar con el servidor AWS.');
           timeoutErr.status = 408;
           timeoutErr.isNetworkError = true;
           throw timeoutErr;
@@ -129,17 +132,16 @@
 
         if (!err.status) {
           err.isNetworkError = true;
-          err.message = 'No fue posible conectar con el servidor API (¿está encendido en ' + this.baseUrl + '?).';
+          err.message = 'No fue posible conectar con el servidor API en AWS (' + this.baseUrl + ').';
         }
 
         throw err;
       }
     }
 
-    /**
-     * 1. Verificar estado de salud de la API
-     * GET /health
-     */
+    // ==========================================
+    // 1. SALUD
+    // ==========================================
     async checkHealth() {
       try {
         const res = await this.request('/health', { method: 'GET' });
@@ -149,102 +151,201 @@
       }
     }
 
-    /**
-     * 2. Consultar lista paginada de solicitudes
-     * GET /api/solicitudes?limit=20&cursor=...
-     */
+    // ==========================================
+    // 2. SOLICITUDES Y DETALLE
+    // ==========================================
     async getSolicitudes(limit = 20, cursor = null) {
       let query = `?limit=${encodeURIComponent(limit)}`;
-      if (cursor) {
-        query += `&cursor=${encodeURIComponent(cursor)}`;
-      }
+      if (cursor) query += `&cursor=${encodeURIComponent(cursor)}`;
       const res = await this.request(`/api/solicitudes${query}`, { method: 'GET' });
       return res.data;
     }
 
-    /**
-     * 3. Consultar solicitud por ID único
-     * GET /api/solicitudes/:id
-     */
     async getSolicitudById(id) {
-      if (!id) throw new Error('Se requiere un identificador de solicitud válido.');
+      if (!id) throw new Error('Identificador de solicitud requerido.');
       const res = await this.request(`/api/solicitudes/${encodeURIComponent(id)}`, { method: 'GET' });
       return res.data;
     }
 
-    /**
-     * 4. Crear nueva solicitud e iniciar Step Functions
-     * POST /api/solicitudes
-     * Responde HTTP 202 Accepted
-     * Contrato oficial DynamoDB (g7-dev-solicitudes):
-     * - description, applicant, department, amount
-     * - articulos: [{"nombre": "...", "cantidad": 1, "precioUnitario": 10, "subtotal": 10}]
-     * - proveedorId: "PRV-001"
-     */
-    async createSolicitud({ descripcion, solicitante, departamento, monto, items, proveedor, proveedorId }) {
-      if (!descripcion || !descripcion.trim()) throw new Error('La descripción es obligatoria.');
-      if (!monto || Number(monto) <= 0) throw new Error('El monto debe ser mayor que cero.');
+    async createSolicitud({ descripcion, department, departamento, monto, amount, articulos, items, proveedorId, proveedor }) {
+      const descFinal = (descripcion || '').trim();
+      if (!descFinal) throw new Error('La descripción es obligatoria.');
+      const montoFinal = Number(amount !== undefined ? amount : monto);
+      if (!montoFinal || montoFinal <= 0) throw new Error('El monto debe ser mayor que cero.');
 
-      // Transformar partidas al formato oficial 'articulos' con 'precioUnitario'
-      const articulosOficiales = Array.isArray(items) && items.length > 0
-        ? items.map(it => ({
+      const articulosOficiales = Array.isArray(articulos) && articulos.length > 0
+        ? articulos.map(it => ({
             nombre: it.nombre || 'Partida',
             cantidad: Number(it.cantidad || 1),
-            precioUnitario: Number(it.precio !== undefined ? it.precio : (it.precioUnitario || 0)),
-            subtotal: Number(it.subtotal !== undefined ? it.subtotal : (Number(it.cantidad || 1) * Number(it.precio || 0)))
+            precioUnitario: Number(it.precioUnitario !== undefined ? it.precioUnitario : (it.precio || 0))
           }))
-        : [];
+        : (Array.isArray(items) && items.length > 0
+          ? items.map(it => ({
+              nombre: it.nombre || 'Partida',
+              cantidad: Number(it.cantidad || 1),
+              precioUnitario: Number(it.precioUnitario !== undefined ? it.precioUnitario : (it.precio || 0))
+            }))
+          : [{ nombre: descFinal, cantidad: 1, precioUnitario: montoFinal }]);
 
       const payload = {
-        // Campos canónicos del backend Express y DynamoDB
-        descripcion: descripcion.trim(),
-        description: descripcion.trim(),
-        solicitante: solicitante || 'usuario@empresa.com',
-        applicant: solicitante || 'usuario@empresa.com',
-        departamento: departamento || 'DEP-TI',
-        department: departamento || 'DEP-TI',
-        monto: Number(monto),
-        amount: Number(monto),
+        description: descFinal,
+        department: department || departamento || 'DEP-TI',
+        amount: montoFinal,
         articulos: articulosOficiales,
-        items: items, // Compatibilidad retrospectiva
-        proveedorId: proveedorId || 'PRV-001',
-        proveedor: proveedor || ''
+        proveedorId: proveedorId || 'PRV-001'
       };
 
       const res = await this.request('/api/solicitudes', {
         method: 'POST',
         body: JSON.stringify(payload)
       });
-
       return res.data;
     }
 
-    /**
-     * 5. Dictaminar Solicitud (Aprobar o Rechazar decisión humana)
-     * Ruta oficial y exclusiva contra DynamoDB: PATCH /api/solicitudes/:id/decision
-     */
-    async dictaminarSolicitud(id, { decision, comentario, comments, aprobador, decidedBy, taskToken }) {
-      if (!id) throw new Error('ID de solicitud requerido para dictaminar.');
-      if (!decision || (decision !== 'APPROVED' && decision !== 'REJECTED')) {
+    async getAprobaciones() {
+      const res = await this.request('/api/aprobaciones', { method: 'GET' });
+      return res.data;
+    }
+
+    async dictaminarSolicitud(id, { decision, comments, comentarios }) {
+      if (!id) throw new Error('ID de solicitud requerido.');
+      if (decision !== 'APPROVED' && decision !== 'REJECTED') {
         throw new Error('La decisión debe ser APPROVED o REJECTED.');
       }
-
-      const motivo = comments || comentario || '';
-      const usuarioAprobador = decidedBy || aprobador || 'Gerencia';
-
-      const payloadDecision = {
-        decision,
-        status: decision,
-        comments: motivo,
-        comentario: motivo,
-        decidedBy: usuarioAprobador,
-        aprobador: usuarioAprobador,
-        ...(taskToken ? { taskToken } : {})
-      };
+      const comentario = (comments || comentarios || '').trim();
+      if (!comentario) {
+        throw new Error('El comentario o justificación es obligatorio tanto al aprobar como al rechazar.');
+      }
 
       const res = await this.request(`/api/solicitudes/${encodeURIComponent(id)}/decision`, {
         method: 'PATCH',
-        body: JSON.stringify(payloadDecision)
+        body: JSON.stringify({
+          decision,
+          comentarios: comentario
+        })
+      });
+      return res.data;
+    }
+
+    async anularSolicitud(id, comentarios) {
+      if (!id) throw new Error('ID de solicitud requerido.');
+      const comentario = (comentarios || '').trim();
+      if (!comentario) {
+        throw new Error('El motivo de anulación es obligatorio.');
+      }
+
+      const res = await this.request(`/api/solicitudes/${encodeURIComponent(id)}/anular`, {
+        method: 'POST',
+        body: JSON.stringify({ comentarios: comentario })
+      });
+      return res.data;
+    }
+
+    // ==========================================
+    // 3. BORRADORES (DYNAMODB)
+    // ==========================================
+    async getBorradores() {
+      const res = await this.request('/api/borradores', { method: 'GET' });
+      return res.data;
+    }
+
+    async createBorrador(draftData = {}) {
+      const res = await this.request('/api/borradores', {
+        method: 'POST',
+        body: JSON.stringify(draftData)
+      });
+      return res.data;
+    }
+
+    async getBorradorById(id) {
+      const res = await this.request(`/api/borradores/${encodeURIComponent(id)}`, { method: 'GET' });
+      return res.data;
+    }
+
+    async updateBorrador(id, patchData, version) {
+      const res = await this.request(`/api/borradores/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ ...patchData, version })
+      });
+      return res.data;
+    }
+
+    async deleteBorrador(id, version) {
+      const res = await this.request(`/api/borradores/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        body: JSON.stringify({ version })
+      });
+      return res.data;
+    }
+
+    async enviarBorrador(id, version) {
+      const res = await this.request(`/api/borradores/${encodeURIComponent(id)}/enviar`, {
+        method: 'POST',
+        body: JSON.stringify({ version })
+      });
+      return res.data;
+    }
+
+    // ==========================================
+    // 4. PROVEEDORES (CATÁLOGO / CRUD)
+    // ==========================================
+    async getProveedores() {
+      const res = await this.request('/api/proveedores', { method: 'GET' });
+      return res.data;
+    }
+
+    async getProveedorById(id) {
+      const res = await this.request(`/api/proveedores/${encodeURIComponent(id)}`, { method: 'GET' });
+      return res.data;
+    }
+
+    async createProveedor(provData) {
+      const res = await this.request('/api/proveedores', {
+        method: 'POST',
+        body: JSON.stringify(provData)
+      });
+      return res.data;
+    }
+
+    async updateProveedor(id, patchData, version) {
+      const res = await this.request(`/api/proveedores/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ ...patchData, version })
+      });
+      return res.data;
+    }
+
+    async deleteProveedor(id, version) {
+      const res = await this.request(`/api/proveedores/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        body: JSON.stringify({ version })
+      });
+      return res.data;
+    }
+
+    // ==========================================
+    // 5. ADMINISTRACIÓN DE CUENTAS (ADMIN_GROUP)
+    // ==========================================
+    async getAdminUsuarios(estado = '') {
+      const query = estado ? `?estado=${encodeURIComponent(estado)}` : '';
+      const res = await this.request(`/api/admin/usuarios${query}`, { method: 'GET' });
+      return res.data;
+    }
+
+    async decidirAdminUsuario(sub, { decision, role, version, comments }) {
+      if (!sub) throw new Error('sub de usuario requerido.');
+      const body = {
+        decision,
+        version: version || 1,
+        comments: (comments || '').trim() || 'Dictamen administrativo'
+      };
+      if (role && decision === 'APPROVED') {
+        body.role = role;
+      }
+
+      const res = await this.request(`/api/admin/usuarios/${encodeURIComponent(sub)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body)
       });
       return res.data;
     }

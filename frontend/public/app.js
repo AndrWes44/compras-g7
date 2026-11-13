@@ -239,8 +239,16 @@ function render() {
   
   if (state.currentView === 'login') {
     app.innerHTML = renderLogin();
+  } else if (state.currentView === 'registro') {
+    app.innerHTML = renderRegistro();
+  } else if (state.currentView === 'confirmar_codigo') {
+    app.innerHTML = renderConfirmarCodigo();
+  } else if (state.currentView === 'espera_aprobacion') {
+    app.innerHTML = renderEsperaAprobacion();
   } else if (state.currentView === 'recuperar_password') {
     app.innerHTML = renderRecuperarPassword();
+  } else if (state.currentView === 'tokens') {
+    app.innerHTML = renderTokensVisualGuide();
   } else {
     // Vistas principales con Layout (Sidebar + Header/Content)
     app.innerHTML = `
@@ -311,36 +319,13 @@ function renderLogin() {
           </button>
         </form>
 
-        <!-- Divisor con perfiles de prueba RBAC -->
-        <div class="relative my-6">
-          <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-aura-border"></div></div>
-          <div class="relative flex justify-center text-xs uppercase"><span class="bg-aura-card px-2 text-slate-400 font-semibold tracking-wider">Usuarios Oficiales Cognito (G7)</span></div>
-        </div>
-
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-          <button type="button" onclick="seleccionarUsuarioCognito('solicitante@g7.com')" class="flex flex-col items-center justify-center p-2.5 rounded-xl border border-aura-border bg-slate-900/50 hover:bg-slate-900 hover:border-blue-500 transition-all group">
-            <span class="w-7 h-7 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold mb-1 group-hover:scale-110 transition-transform">CM</span>
-            <span class="text-xs font-semibold text-slate-200">Solicitante</span>
-            <span class="text-[9px] text-slate-400 truncate max-w-full">solicitante@g7.com</span>
-          </button>
-
-          <button type="button" onclick="seleccionarUsuarioCognito('gerente@g7.com')" class="flex flex-col items-center justify-center p-2.5 rounded-xl border border-aura-border bg-slate-900/50 hover:bg-slate-900 hover:border-emerald-500 transition-all group">
-            <span class="w-7 h-7 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold mb-1 group-hover:scale-110 transition-transform">IH</span>
-            <span class="text-xs font-semibold text-slate-200">Gerente</span>
-            <span class="text-[9px] text-slate-400 truncate max-w-full">gerente@g7.com</span>
-          </button>
-
-          <button type="button" onclick="seleccionarUsuarioCognito('director@g7.com')" class="flex flex-col items-center justify-center p-2.5 rounded-xl border border-aura-border bg-slate-900/50 hover:bg-slate-900 hover:border-purple-500 transition-all group">
-            <span class="w-7 h-7 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold mb-1 group-hover:scale-110 transition-transform">DG</span>
-            <span class="text-xs font-semibold text-slate-200">Director</span>
-            <span class="text-[9px] text-slate-400 truncate max-w-full">director@g7.com</span>
-          </button>
-
-          <button type="button" onclick="seleccionarUsuarioCognito('compras@g7.com')" class="flex flex-col items-center justify-center p-2.5 rounded-xl border border-aura-border bg-slate-900/50 hover:bg-slate-900 hover:border-sky-500 transition-all group">
-            <span class="w-7 h-7 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center text-xs font-bold mb-1 group-hover:scale-110 transition-transform">AM</span>
-            <span class="text-xs font-semibold text-slate-200">Compras</span>
-            <span class="text-[9px] text-slate-400 truncate max-w-full">compras@g7.com</span>
-          </button>
+        <div class="mt-4 text-center">
+          <p class="text-xs text-slate-400">
+            ¿No tienes cuenta institucional? 
+            <button onclick="navigateTo('registro')" class="text-blue-400 hover:text-blue-300 font-semibold underline underline-offset-2 transition-colors ml-1">
+              Crear cuenta
+            </button>
+          </p>
         </div>
 
         <!-- Botón para ver tokens y guía visual -->
@@ -349,6 +334,233 @@ function renderLogin() {
             <i class="fa-solid fa-palette text-blue-400"></i>
             <span>Ver Guía Visual & Tokens de Diseño (Figma)</span>
           </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+
+// ----------------- REGISTRO Y GESTIÓN DE ACCESO (AWS COGNITO) -----------------
+function renderRegistro() {
+  return `
+    <div class="min-h-screen flex items-center justify-center bg-aura-canvas p-4 relative">
+      <div class="absolute -top-32 left-1/2 -translate-x-1/2 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="w-full max-w-md bg-aura-card border border-aura-border rounded-2xl p-8 shadow-2xl relative z-10 space-y-5">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white text-xl shadow-lg">
+            <i class="fa-solid fa-user-plus"></i>
+          </div>
+          <div>
+            <h1 class="text-xl font-bold tracking-tight text-white">Solicitud de Acceso</h1>
+            <p class="text-xs text-slate-400">AURA Compras — Registro de Cuenta</p>
+          </div>
+        </div>
+
+        <p class="text-xs text-slate-300 leading-relaxed">
+          Ingresa tus datos corporativos. Recibirás un código de verificación en tu correo y tu solicitud será revisada por el Administrador.
+        </p>
+
+        <form onsubmit="handleRegistroSubmit(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1.5">Nombre Completo</label>
+            <input type="text" id="reg-name" required placeholder="Ej: Juan Pérez" class="w-full px-3 py-2.5 bg-aura-input border border-aura-border rounded-lg text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1.5">Correo Corporativo</label>
+            <input type="email" id="reg-email" required placeholder="usuario@empresa.com" class="w-full px-3 py-2.5 bg-aura-input border border-aura-border rounded-lg text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1.5">Contraseña</label>
+            <input type="password" id="reg-password" required placeholder="••••••••" class="w-full px-3 py-2.5 bg-aura-input border border-aura-border rounded-lg text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500">
+            <span class="text-[10px] text-slate-500 mt-1 block">Mínimo 8 caracteres, mayúsculas, minúsculas y caracteres especiales.</span>
+          </div>
+
+          <button type="submit" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg text-sm shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-2">
+            <span>Crear Cuenta y Solicitar Aprobación</span>
+            <i class="fa-solid fa-arrow-right text-xs"></i>
+          </button>
+        </form>
+
+        <div class="pt-4 border-t border-aura-border text-center">
+          <button onclick="navigateTo('login')" class="text-xs text-slate-400 hover:text-slate-200 transition-colors inline-flex items-center gap-1.5">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span>Volver a Iniciar Sesión</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderConfirmarCodigo() {
+  const email = state.pendingEmail || '';
+  return `
+    <div class="min-h-screen flex items-center justify-center bg-aura-canvas p-4 relative">
+      <div class="w-full max-w-md bg-aura-card border border-aura-border rounded-2xl p-8 shadow-2xl relative z-10 space-y-5">
+        <div class="w-12 h-12 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl">
+          <i class="fa-solid fa-envelope-circle-check"></i>
+        </div>
+
+        <div>
+          <h2 class="text-lg font-bold text-white mb-1">Verifica tu Correo Electrónico</h2>
+          <p class="text-xs text-slate-400">
+            Hemos enviado un código numérico a <strong class="text-white">${email}</strong>. Ingrésalo para validar tu identidad.
+          </p>
+        </div>
+
+        <form onsubmit="handleConfirmarCodigoSubmit(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1.5">Código de Verificación (OTP)</label>
+            <input type="text" id="confirm-code" required placeholder="123456" maxlength="10" class="w-full px-3 py-2.5 bg-aura-input border border-aura-border rounded-lg text-sm text-center tracking-widest font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500">
+          </div>
+
+          <button type="submit" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg text-sm shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2">
+            <span>Confirmar Correo</span>
+            <i class="fa-solid fa-check text-xs"></i>
+          </button>
+        </form>
+
+        <div class="flex items-center justify-between pt-4 border-t border-aura-border text-xs">
+          <button onclick="handleReenviarCodigo('${email}')" class="text-blue-400 hover:text-blue-300">
+            Reenviar código
+          </button>
+          <button onclick="navigateTo('login')" class="text-slate-400 hover:text-slate-200">
+            Ir al Login
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderEsperaAprobacion() {
+  const email = state.pendingEmail || '';
+  return `
+    <div class="min-h-screen flex items-center justify-center bg-aura-canvas p-4 relative">
+      <div class="w-full max-w-md bg-aura-card border border-aura-border rounded-2xl p-8 shadow-2xl relative z-10 text-center space-y-5">
+        <div class="w-14 h-14 mx-auto rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-2xl border border-amber-500/30">
+          <i class="fa-solid fa-clock"></i>
+        </div>
+
+        <div>
+          <h2 class="text-lg font-bold text-white mb-2">Cuenta Pendiente de Aprobación</h2>
+          <p class="text-xs text-slate-300 leading-relaxed mb-2">
+            Tu correo <strong class="text-white">${email}</strong> ya fue verificado correctamente.
+          </p>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            De acuerdo con las políticas de seguridad de AURA, un <strong>Administrador</strong> debe autorizar tu cuenta y asignarte uno de los roles comerciales (Solicitante, Gerente, Director o Compras) antes de que puedas acceder.
+          </p>
+        </div>
+
+        <div class="p-3.5 bg-slate-900/60 rounded-xl border border-aura-border text-[11px] text-slate-400 text-left space-y-1">
+          <div class="flex items-center gap-2 text-slate-300 font-semibold">
+            <i class="fa-solid fa-shield-halved text-blue-400"></i>
+            <span>Estado: PENDING_APPROVAL</span>
+          </div>
+          <div>Por favor consulta con el Administrador o reintenta iniciar sesión más tarde.</div>
+        </div>
+
+        <button onclick="navigateTo('login')" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-lg text-xs border border-aura-border transition-all">
+          Volver a Iniciar Sesión
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+// ----------------- PANEL ADMINISTRATIVO DE USUARIOS -----------------
+function renderAdminUsuarios() {
+  const usuarios = state.adminUsuarios || [];
+  const filtroEstado = state.adminFiltroEstado || 'PENDING_APPROVAL';
+
+  return `
+    <div class="space-y-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-bold text-white">Panel de Administración de Cuentas y Accesos</h3>
+          <p class="text-xs text-slate-400">Gestiona altas verificadas, asigna roles comerciales o revoca accesos de usuarios.</p>
+        </div>
+        <button onclick="recargarAdminUsuariosApi()" class="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow transition-all flex items-center gap-2">
+          <i class="fa-solid fa-rotate text-xs"></i>
+          <span>Actualizar Bandeja</span>
+        </button>
+      </div>
+
+      <!-- Filtros de Estado -->
+      <div class="flex items-center gap-2 border-b border-aura-border pb-3 text-xs">
+        <button onclick="setAdminFiltroEstado('')" class="px-3 py-1.5 rounded-lg font-medium transition-all ${!filtroEstado ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}">
+          Pendientes (PENDING_APPROVAL)
+        </button>
+        <button onclick="setAdminFiltroEstado('APPROVED')" class="px-3 py-1.5 rounded-lg font-medium transition-all ${filtroEstado === 'APPROVED' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}">
+          Aprobados (APPROVED)
+        </button>
+        <button onclick="setAdminFiltroEstado('REJECTED')" class="px-3 py-1.5 rounded-lg font-medium transition-all ${filtroEstado === 'REJECTED' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}">
+          Rechazados (REJECTED)
+        </button>
+      </div>
+
+      <!-- Tabla de Solicitudes de Acceso -->
+      <div class="bg-aura-card border border-aura-border rounded-xl overflow-hidden shadow-xl">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-900/60 text-slate-400 border-b border-aura-border">
+              <tr>
+                <th class="py-3 px-4">Usuario / Correo</th>
+                <th class="py-3 px-4">Nombre Registrado</th>
+                <th class="py-3 px-4">Estado Actual</th>
+                <th class="py-3 px-4">Rol Asignado</th>
+                <th class="py-3 px-4">Versión</th>
+                <th class="py-3 px-4 text-center">Acciones Administrativas</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-aura-border text-slate-200">
+              ${usuarios.length === 0 ? `
+                <tr>
+                  <td colspan="6" class="py-8 text-center text-slate-500 italic">
+                    No hay solicitudes de acceso en este estado.
+                  </td>
+                </tr>
+              ` : usuarios.map(u => {
+                const sub = u.sub || u.userId || u.id;
+                const version = u.version || 1;
+                return `
+                  <tr class="hover:bg-slate-800/40 transition-colors">
+                    <td class="py-3.5 px-4 font-mono font-medium text-blue-400">${u.email || sub}</td>
+                    <td class="py-3.5 px-4 font-semibold text-white">${u.name || 'Sin nombre'}</td>
+                    <td class="py-3.5 px-4">
+                      <span class="px-2 py-0.5 rounded text-[10px] font-bold ${
+                        u.status === 'APPROVED' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                        u.status === 'REJECTED' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                        'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                      }">
+                        ${u.status || 'PENDING_APPROVAL'}
+                      </span>
+                    </td>
+                    <td class="py-3.5 px-4">
+                      <span class="font-medium text-slate-300">${u.role || u.rol || 'Sin rol asignado'}</span>
+                    </td>
+                    <td class="py-3.5 px-4 font-mono text-slate-400">v${version}</td>
+                    <td class="py-3.5 px-4 text-center">
+                      <div class="flex items-center justify-center gap-1.5">
+                        <button onclick="abrirModalAprobarUsuario('${sub}', ${version})" class="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[11px] shadow-sm transition-all">
+                          ${u.status === 'APPROVED' ? 'Cambiar Rol' : 'Aprobar'}
+                        </button>
+                        ${u.status !== 'REJECTED' ? `
+                          <button onclick="rechazarUsuarioAdmin('${sub}', ${version})" class="px-2.5 py-1.5 rounded-lg bg-red-600/80 hover:bg-red-600 text-white font-semibold text-[11px] shadow-sm transition-all">
+                            Rechazar
+                          </button>
+                        ` : ''}
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -396,7 +608,12 @@ function renderSidebar() {
 
   // Ítems de navegación según el rol RBAC oficial de Cognito
   let navItems = [];
-  if (isSolicitante) {
+  if (state.currentUser && state.currentUser.isAdmin) {
+    navItems = [
+      { id: 'admin_usuarios', label: 'Gestión de Cuentas', icon: 'fa-users-gear', allowed: true },
+      { id: 'solicitudes', label: 'Solicitudes', icon: 'fa-table-columns', allowed: true }
+    ];
+  } else if (isSolicitante) {
     // Solicitante: Dashboard y Mis Solicitudes
     navItems = [
       { id: 'dashboard', label: 'Dashboard', icon: 'fa-chart-pie', allowed: true },
@@ -558,6 +775,8 @@ function renderTopNav() {
 // ----------------- VISTAS PRINCIPALES -----------------
 function renderMainContent() {
   switch (state.currentView) {
+    case 'admin_usuarios':
+      return renderAdminUsuarios();
     case 'dashboard':
       return renderDashboard();
     case 'solicitudes':
@@ -1261,6 +1480,20 @@ function renderDetalleSolicitud() {
               </span>
             </div>
           </div>
+        ` : item.estado === 'anulado' || item.status === 'CANCELLED' ? `
+          <div class="p-4 rounded-xl border bg-slate-800/80 border-slate-600 text-slate-300 flex items-start gap-3">
+            <div class="w-6 h-6 rounded-full bg-slate-700 border border-slate-500 flex items-center justify-center shrink-0 mt-0.5">
+              <i class="fa-solid fa-ban text-slate-400 text-xs"></i>
+            </div>
+            <div>
+              <span class="text-xs font-bold text-white block">
+                Solicitud Anulada por el Solicitante (CANCELLED)
+              </span>
+              <span class="text-[11px] text-slate-400 mt-0.5 block">
+                Motivo: "${item.comentarios || item.motivoAnulacion || 'Anulada por requerimiento del área.'}"
+              </span>
+            </div>
+          </div>
         ` : item.estado === 'rechazado' ? `
           <!-- Pantalla Oficial Figma 15: 8c_detalle_solicitud_rechazada -->
           <div class="p-4 rounded-xl border bg-red-500/15 border-red-500/40 text-red-300 flex items-start gap-3">
@@ -1316,6 +1549,15 @@ function renderDetalleSolicitud() {
           </div>
         ` : ''}
 
+        ${isSolicitante && item.estado === 'en_revision' ? `
+          <div class="pt-4 border-t border-aura-border flex items-center justify-between">
+            <button onclick="anularSolicitud('${item.id}')" class="px-3.5 py-2 rounded-lg bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/40 text-xs font-semibold transition-all flex items-center gap-2">
+              <i class="fa-solid fa-ban text-xs"></i>
+              <span>Anular mi Solicitud</span>
+            </button>
+            <span class="text-[11px] text-slate-500">Solo el solicitante puede anular mientras esté pendiente.</span>
+          </div>
+        ` : ''}
         <!-- Botones de Acción de Dictamen (Gerente para monto <= 1000, Director para alto monto) -->
         ${canDictaminar && item.estado === 'en_revision' ? `
           <div class="pt-4 border-t border-aura-border flex items-center justify-end gap-3">
@@ -1514,7 +1756,10 @@ function renderColorSwatch(hex, name, token) {
 
 // ----------------- HELPERS VISUALES -----------------
 function renderBadgeEstado(estado) {
-  switch (estado) {
+  switch (estado ? estado.toLowerCase() : '') {
+    case 'anulado':
+    case 'cancelled':
+      return `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-zinc-800 text-zinc-400 border border-zinc-700"><i class="fa-solid fa-ban mr-1 text-[9px]"></i>Anulado</span>`;
     case 'aprobado':
       return `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Aprobado</span>`;
     case 'rechazado':
@@ -1643,35 +1888,56 @@ window.loginAs = function(role) {
 
 window.handleLoginFormSubmit = async function(e) {
   e.preventDefault();
-  const email = document.getElementById('login-email').value.trim().toLowerCase();
-  const password = document.getElementById('login-password').value;
+  const emailInput = document.getElementById('login-email');
+  const passwordInput = document.getElementById('login-password');
+  const email = emailInput ? emailInput.value.trim().toLowerCase() : '';
+  const password = passwordInput ? passwordInput.value : '';
 
   if (!email || !password) {
     showToast('Ingresa correo y contraseña para autenticar con Cognito.', 'warning');
     return;
   }
 
-  // Autenticar vía authService
-  if (window.authService) {
-    try {
-      const authUser = await window.authService.login(email, password);
-      loginAs(authUser.role);
-      return;
-    } catch (err) {
-      showToast('Error de autenticación: ' + err.message, 'warning');
-      return;
-    }
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const originalText = submitBtn ? submitBtn.innerHTML : '';
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i><span>Validando en AWS...</span>';
   }
 
-  // Fallback si no está el módulo cargado
-  if (email.includes('director')) {
-    loginAs('director');
-  } else if (email.includes('gerente')) {
-    loginAs('gerente');
-  } else if (email.includes('compras')) {
-    loginAs('compras');
-  } else {
-    loginAs('solicitante');
+  try {
+    if (!window.authService) {
+      throw new Error('Servicio de autenticación no cargado.');
+    }
+    const authUser = await window.authService.login(email, password);
+    state.currentRole = authUser.role;
+    state.currentUser = authUser;
+    state.currentView = authUser.isAdmin ? 'admin_usuarios' : 'dashboard';
+    showToast('Sesión validada exitosamente con Amazon Cognito.', 'info');
+    render();
+    if (typeof window.recargarSolicitudesApi === 'function') {
+      window.recargarSolicitudesApi();
+    }
+    if (typeof window.recargarProveedoresApi === 'function') {
+      window.recargarProveedoresApi();
+    }
+    if (typeof window.recargarBorradoresApi === 'function' && authUser.role === 'solicitante') {
+      window.recargarBorradoresApi();
+    }
+  } catch (err) {
+    console.error('[AURA Auth Error]', err);
+    if (err.status === 403 && err.message && (err.message.includes('aprobación') || err.message.includes('autorizada'))) {
+      state.pendingEmail = email;
+      state.currentView = 'espera_aprobacion';
+      render();
+      return;
+    }
+    showToast('Error de autenticación: ' + (err.message || 'Credenciales inválidas'), 'warning');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalText;
+    }
   }
 };
 
@@ -1681,15 +1947,23 @@ window.handleRecuperarSubmit = function(e) {
   navigateTo('login');
 };
 
-window.handleLogout = function() {
+window.handleLogout = async function() {
+  if (window.authService) {
+    await window.authService.logoutRemote();
+  }
   state.currentRole = null;
+  state.currentUser = null;
   state.loginCreds = { email: '', password: '' };
   state.currentView = 'login';
-  showToast('Sesión cerrada correctamente.', 'info');
+  showToast('Sesión cerrada y revocada correctamente.', 'info');
   render();
 };
 
-
+window.loginAs = function(role) {
+  state.currentRole = role;
+  state.currentView = role === 'admin' || role === 'administrador' ? 'admin_usuarios' : 'dashboard';
+  render();
+};
 
 window.setFilterCategoria = function(cat) {
   state.activeFilterCategoria = cat;
@@ -1707,6 +1981,8 @@ window.normalizarSolicitudDesdeApi = function(raw) {
     estadoNormalizado = 'en_revision';
   } else if (statusRaw.includes('reject') || statusRaw.includes('rechaz')) {
     estadoNormalizado = 'rechazado';
+  } else if (statusRaw.includes('cancel') || statusRaw.includes('anul')) {
+    estadoNormalizado = 'anulado';
   } else if (statusRaw.includes('draft') || statusRaw.includes('borrador')) {
     estadoNormalizado = 'borrador';
   } else if (statusRaw.includes('approv') || statusRaw.includes('aprob')) {
@@ -1852,9 +2128,14 @@ window.verDetalleSolicitud = async function(id) {
   }
 };
 
-window.dictaminarSolicitud = async function(id, resultado) {
+window.dictaminarSolicitud = async function(id, resultado, comentarioUsuario = null) {
   if (state.currentRole === 'solicitante') {
     showToast('Acceso Denegado: Un solicitante no tiene permisos de dictamen.', 'warning');
+    return;
+  }
+
+  if (state.currentRole === 'compras') {
+    showToast('Acceso Denegado: Compras no tiene permisos de dictamen según la matriz de roles.', 'warning');
     return;
   }
 
@@ -1862,51 +2143,52 @@ window.dictaminarSolicitud = async function(id, resultado) {
   if (!s) return;
 
   const decisionAws = resultado === 'aprobado' ? 'APPROVED' : 'REJECTED';
-  const currentUser = state.users[state.currentRole] || state.users.gerente;
-  const comentarioDefault = resultado === 'aprobado' 
-    ? 'Aprobado conforme al presupuesto asignado y validación de partidas.' 
-    : 'Rechazado tras evaluación técnica-financiera: no procede adquisición externa.';
+  
+  // Exigir comentario obligatorio en ambos casos
+  let comentarioFinal = comentarioUsuario;
+  if (!comentarioFinal || !comentarioFinal.trim()) {
+    if (typeof prompt === 'function') {
+      const promptMsg = decisionAws === 'APPROVED' 
+        ? 'Ingresa el comentario obligatorio de justificación para APROBAR la solicitud:' 
+        : 'Ingresa el motivo obligatorio de rechazo para RECHAZAR la solicitud:';
+      comentarioFinal = prompt(promptMsg, decisionAws === 'APPROVED' ? 'Aprobado conforme a presupuesto y necesidad justificada.' : '');
+    } else {
+      comentarioFinal = decisionAws === 'APPROVED' 
+        ? 'Aprobado conforme a presupuesto y necesidad justificada.' 
+        : 'Rechazado tras evaluación técnica-financiera.';
+    }
+    if (!comentarioFinal || !comentarioFinal.trim()) {
+      showToast('El comentario es obligatorio tanto al aprobar como al rechazar.', 'warning');
+      return;
+    }
+  }
 
-  // Notificar al usuario e intentar persistencia real en Backend/AWS
+  const currentUser = (state.currentUser && state.currentUser.name) || (state.users[state.currentRole] ? state.users[state.currentRole].name : 'Aprobador');
+
   let persistidoRemoto = false;
   if (window.apiService && id) {
     try {
       await window.apiService.dictaminarSolicitud(id, {
         decision: decisionAws,
-        comentario: comentarioDefault,
-        aprobador: currentUser.name
+        comentarios: comentarioFinal.trim(),
+        comentario: comentarioFinal.trim(),
+        aprobador: currentUser,
+        decidedBy: currentUser
       });
       persistidoRemoto = true;
-      showToast(`Solicitud ${id} ${resultado.toUpperCase()} y registrada en AWS Step Functions / DynamoDB.`, resultado === 'aprobado' ? 'success' : 'warning');
+      showToast(`Solicitud ${id} ${resultado.toUpperCase()} y registrada en AWS DynamoDB.`, resultado === 'aprobado' ? 'success' : 'warning');
     } catch (err) {
       console.warn(`[AURA] Falla al persistir dictamen en backend/AWS:`, err.message);
-      if (!window.AURA_CONFIG || !window.AURA_CONFIG.offlineFallback) {
-        // En producción: Si AWS falla, no fingir aprobación y avisar al usuario
-        if (typeof window.mostrarErrorModal === 'function') {
-          window.mostrarErrorModal({
-            title: 'Fallo al Dictaminar en AWS',
-            message: `No se pudo registrar la decisión en AWS (${err.message}). Por favor reintenta la operación.`,
-            code: err.status || 500,
-            actionText: 'Entendido',
-            onAction: 'cerrarErrorModal()'
-          });
-        } else {
-          showToast(`Error al dictaminar en AWS: ${err.message}`, 'error');
-        }
-        return; // Interrumpir para no alterar el estado visual local falsamente
-      }
+      showToast(`Error al registrar dictamen en AWS: ${err.message}`, 'error');
+      return;
     }
   }
 
-  // Actualizar estado local
   s.estado = resultado;
+  s.status = decisionAws;
   s.fechaDictamen = 'Hoy';
-  s.aprobador = currentUser.name;
-  s.comentariosGerente = comentarioDefault;
-
-  if (!persistidoRemoto) {
-    showToast(`Solicitud ${id} fue ${resultado.toUpperCase()} con éxito.`, resultado === 'aprobado' ? 'success' : 'warning');
-  }
+  s.aprobador = currentUser;
+  s.comentariosGerente = comentarioFinal.trim();
 
   render();
 };
@@ -1991,17 +2273,17 @@ window.persistirBorradoresLocales = function() {
   }
 };
 
-window.guardarBorrador = function() {
+window.guardarBorrador = async function() {
   const desc = document.getElementById('solicitud-desc').value.trim() || 'Borrador sin título';
   const dep = document.getElementById('solicitud-dep')?.value || 'DEP-TI';
-  const prov = document.getElementById('solicitud-prov').value || 'Sin asignar';
+  const prov = document.getElementById('solicitud-prov').value || 'PRV-001';
   const total = state.nuevaSolicitudForm.items.reduce((acc, it) => acc + (it.cantidad * it.precio), 0);
-  
-  const nuevoId = window.generarSiguienteIdLocal();
-  const nuevoBorrador = {
-    id: nuevoId,
+
+  const localId = window.generarSiguienteIdLocal();
+  const localBorrador = {
+    id: localId,
     descripcion: desc,
-    solicitante: state.users[state.currentRole].name,
+    solicitante: (state.currentUser && state.currentUser.name) || (state.users[state.currentRole] ? state.users[state.currentRole].name : 'Solicitante'),
     departamento: dep,
     proveedor: prov,
     total: total,
@@ -2012,10 +2294,35 @@ window.guardarBorrador = function() {
     esAltoMonto: total >= 1000
   };
 
-  state.solicitudes.unshift(nuevoBorrador);
+  state.solicitudes.unshift(localBorrador);
   window.persistirBorradoresLocales();
 
-  // Resetear formulario
+  const payloadBorrador = {
+    description: desc,
+    department: dep,
+    proveedorId: prov,
+    amount: total,
+    articulos: state.nuevaSolicitudForm.items.map(it => ({
+      nombre: it.nombre || 'Partida',
+      cantidad: Number(it.cantidad || 1),
+      precioUnitario: Number(it.precio || 0)
+    }))
+  };
+
+  if (window.apiService) {
+    try {
+      const res = await window.apiService.createBorrador(payloadBorrador);
+      const draftId = (res && (res.borrador?.id || res.id || res.draftId)) || localId;
+      localBorrador.id = draftId;
+      showToast(`Borrador guardado en AWS DynamoDB (${draftId}).`, 'info');
+      window.persistirBorradoresLocales();
+      await window.recargarBorradoresApi();
+    } catch (err) {
+      console.warn('[AURA Guardar Borrador Error]', err.message);
+      showToast('Aviso: guardando borrador localmente (' + err.message + ')', 'warning');
+    }
+  }
+
   state.nuevaSolicitudForm = {
     descripcion: '',
     departamento: 'DEP-TI',
@@ -2023,7 +2330,7 @@ window.guardarBorrador = function() {
     items: [{ nombre: '', cantidad: 1, precio: 0, subtotal: 0 }]
   };
 
-  showToast(`Borrador ${nuevoId} guardado con éxito.`, 'info');
+  showToast(`Borrador ${localId} guardado con éxito.`, 'info');
   navigateTo('solicitudes');
 };
 
@@ -2173,7 +2480,26 @@ window.cerrarModalEliminar = function() {
   render();
 };
 
-window.ejecutarEliminarProveedor = function() {
+window.ejecutarEliminarProveedor = async function() {
+  if (!state.proveedorToDelete) return;
+  const id = state.proveedorToDelete.id;
+  const version = state.proveedorToDelete.version || 1;
+
+  if (window.apiService) {
+    try {
+      await window.apiService.deleteProveedor(id, version);
+      showToast('Proveedor dado de baja en AWS (baja lógica).', 'info');
+      await window.recargarProveedoresApi();
+      cerrarModalEliminar();
+      return;
+    } catch (err) {
+      console.error('[AURA Delete Proveedor Error]', err);
+      showToast('Error al dar de baja proveedor en AWS: ' + err.message, 'warning');
+      cerrarModalEliminar();
+      return;
+    }
+  }
+
   if (state.proveedorToDelete) {
     const id = state.proveedorToDelete.id;
     state.proveedores = state.proveedores.filter(p => p.id !== id);
@@ -2183,7 +2509,7 @@ window.ejecutarEliminarProveedor = function() {
   }
 };
 
-window.handleGuardarProveedor = function(e, isEdit) {
+window.handleGuardarProveedor = async function(e, isEdit) {
   e.preventDefault();
   const nombre = document.getElementById('prov-nombre').value.trim();
   const categoria = document.getElementById('prov-categoria').value;
@@ -2191,6 +2517,36 @@ window.handleGuardarProveedor = function(e, isEdit) {
   const contacto = document.getElementById('prov-contacto').value.trim();
   const telefono = document.getElementById('prov-telefono').value.trim();
 
+  const payload = {
+    name: nombre,
+    category: categoria,
+    status: estado === 'Calificado' ? 'ACTIVE' : 'INACTIVE',
+    contactEmail: contacto,
+    phone: telefono
+  };
+
+  if (window.apiService) {
+    try {
+      if (isEdit) {
+        const p = state.proveedores.find(x => x.id === state.selectedProveedorId);
+        const version = p ? (p.version || 1) : 1;
+        await window.apiService.updateProveedor(state.selectedProveedorId, payload, version);
+        showToast('Proveedor actualizado en AWS.', 'success');
+      } else {
+        await window.apiService.createProveedor(payload);
+        showToast('Proveedor creado en AWS.', 'success');
+      }
+      await window.recargarProveedoresApi();
+      navigateTo('proveedores');
+      return;
+    } catch (err) {
+      console.error('[AURA Guardar Proveedor Error]', err);
+      showToast('Error al persistir proveedor en AWS: ' + err.message, 'warning');
+      return;
+    }
+  }
+
+  // Respaldo de compatibilidad
   if (isEdit) {
     const p = state.proveedores.find(x => x.id === state.selectedProveedorId);
     if (p) {
@@ -2257,39 +2613,275 @@ window.enviarBorradorAFirma = async function(id) {
   const s = state.solicitudes.find(x => x.id === id);
   if (!s) return;
 
-  const currentUser = state.users[state.currentRole] || state.users.solicitante;
-  const applicantEmail = currentUser.email || 'carlos@empresa.com';
+  const version = s.submitVersion || s.version || 1;
 
   if (window.apiService) {
     try {
-      const res = await window.apiService.createSolicitud({
-        descripcion: s.descripcion,
-        solicitante: applicantEmail,
-        departamento: s.departamento || 'DEP-TI',
-        monto: s.total,
-        items: s.items,
-        proveedor: s.proveedor
-      });
+      let res;
+      try {
+        res = await window.apiService.enviarBorrador(id, version);
+      } catch (e) {
+        res = await window.apiService.createSolicitud({
+          descripcion: s.descripcion,
+          departamento: s.departamento || 'DEP-TI',
+          department: s.departamento || 'DEP-TI',
+          monto: s.total,
+          amount: s.total,
+          items: s.items,
+          articulos: s.items,
+          proveedorId: s.proveedorId || 'PRV-001'
+        });
+      }
 
-      const reqId = res.requestId || `REQ-${Date.now()}`;
+      const reqId = (res && (res.requestId || res.id)) || `REQ-${Date.now()}`;
       s.id = reqId;
       s.requestId = reqId;
       s.estado = 'en_revision';
       s.fecha = 'Hoy';
-      s.executionArn = res.executionArn || '';
+      s.executionArn = (res && res.executionArn) || '';
 
       window.persistirBorradoresLocales();
-      showToast(`Borrador remitido a AWS Step Functions (${reqId}, HTTP 202).`, 'success');
+      showToast(`Borrador enviado formalmente a AWS Step Functions (${reqId}, HTTP 202).`, 'success');
       render();
       return;
     } catch (err) {
-      console.warn('[AURA] API no disponible al enviar borrador, pasando a modo local:', err.message);
+      console.warn('[AURA Enviar Borrador Error]:', err.message);
+      showToast('Error al enviar borrador a aprobación: ' + err.message, 'warning');
+      return;
     }
   }
 
+  // Fallback local para pruebas unitarias
   s.estado = 'en_revision';
   s.fecha = 'Hoy';
   window.persistirBorradoresLocales();
   showToast(`Borrador ${id} remitido exitosamente a revisión gerencial.`, 'success');
   render();
+};
+
+// ==========================================
+// CONTROLADORES: REGISTRO Y ADMIN DE USUARIOS
+// ==========================================
+window.handleRegistroSubmit = async function(e) {
+  e.preventDefault();
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim().toLowerCase();
+  const password = document.getElementById('reg-password').value;
+
+  if (!name || !email || !password) {
+    showToast('Por favor completa todos los campos obligatorios.', 'warning');
+    return;
+  }
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const originalText = submitBtn ? submitBtn.innerHTML : '';
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i><span>Enviando solicitud a AWS...</span>';
+  }
+
+  try {
+    await window.authService.registro({ email, password, name });
+    state.pendingEmail = email;
+    state.currentView = 'confirmar_codigo';
+    showToast('Cuenta registrada. Revisa el código de verificación enviado a tu correo.', 'info');
+    render();
+  } catch (err) {
+    console.error('[AURA Registro Error]', err);
+    showToast('Error al registrar usuario: ' + err.message, 'warning');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalText;
+    }
+  }
+};
+
+window.handleConfirmarCodigoSubmit = async function(e) {
+  e.preventDefault();
+  const code = document.getElementById('confirm-code').value.trim();
+  const email = state.pendingEmail;
+
+  if (!code || !email) {
+    showToast('Ingresa el código numérico de verificación.', 'warning');
+    return;
+  }
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const originalText = submitBtn ? submitBtn.innerHTML : '';
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i><span>Verificando...</span>';
+  }
+
+  try {
+    await window.authService.confirmarCodigo({ email, code });
+    showToast('¡Correo verificado con éxito!', 'info');
+    state.currentView = 'espera_aprobacion';
+    render();
+  } catch (err) {
+    console.error('[AURA Confirmar Error]', err);
+    showToast('Error al confirmar código: ' + err.message, 'warning');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalText;
+    }
+  }
+};
+
+window.handleReenviarCodigo = async function(email) {
+  if (!email) {
+    showToast('Correo no especificado.', 'warning');
+    return;
+  }
+  try {
+    await window.authService.reenviarCodigo(email);
+    showToast('Código de verificación reenviado a tu correo.', 'info');
+  } catch (err) {
+    showToast('Error al reenviar código: ' + err.message, 'warning');
+  }
+};
+
+window.recargarAdminUsuariosApi = async function() {
+  if (!window.apiService) return;
+  try {
+    const estado = state.adminFiltroEstado || '';
+    const res = await window.apiService.getAdminUsuarios(estado);
+    state.adminUsuarios = (res && res.usuarios) ? res.usuarios : (Array.isArray(res) ? res : []);
+    render();
+  } catch (err) {
+    console.warn('[AURA Admin Usuarios Error]', err.message);
+    showToast('Error al cargar usuarios administrativos: ' + err.message, 'warning');
+  }
+};
+
+window.setAdminFiltroEstado = function(estado) {
+  state.adminFiltroEstado = estado;
+  window.recargarAdminUsuariosApi();
+};
+
+window.abrirModalAprobarUsuario = function(sub, version) {
+  const rol = prompt('Asignar rol comercial (Solicitante, Gerente, Director, Compras):', 'Solicitante');
+  if (!rol) return;
+  const comentarios = prompt('Comentario o motivo de auditoría administrativa:', 'Alta aprobada por administrador');
+  if (!comentarios) return;
+
+  window.ejecutarDecidirUsuarioAdmin(sub, {
+    decision: 'APPROVED',
+    role: rol.trim(),
+    version: version || 1,
+    comments: comentarios.trim()
+  });
+};
+
+window.rechazarUsuarioAdmin = function(sub, version) {
+  const comentarios = prompt('Motivo obligatorio de rechazo de acceso:', 'Acceso no autorizado');
+  if (!comentarios) return;
+
+  window.ejecutarDecidirUsuarioAdmin(sub, {
+    decision: 'REJECTED',
+    version: version || 1,
+    comments: comentarios.trim()
+  });
+};
+
+window.ejecutarDecidirUsuarioAdmin = async function(sub, payload) {
+  try {
+    await window.apiService.decidirAdminUsuario(sub, payload);
+    showToast('Operación administrativa ejecutada con éxito.', 'info');
+    await window.recargarAdminUsuariosApi();
+  } catch (err) {
+    console.error('[AURA Decidir Usuario Error]', err);
+    showToast('Error administrativo: ' + err.message, 'warning');
+  }
+};
+
+// ==========================================
+// CONTROLADORES: ANULACIÓN DE SOLICITUDES
+// ==========================================
+window.anularSolicitud = async function(id) {
+  if (!id) return;
+  const comentarios = prompt('Ingresa el motivo obligatorio para anular esta solicitud:');
+  if (!comentarios || !comentarios.trim()) {
+    showToast('El motivo de anulación es obligatorio.', 'warning');
+    return;
+  }
+
+  try {
+    await window.apiService.anularSolicitud(id, comentarios.trim());
+    showToast(`Solicitud ${id} anulada exitosamente (CANCELLED).`, 'info');
+    await window.recargarSolicitudesApi();
+    if (state.currentView === 'detalle_solicitud') {
+      await window.verDetalleSolicitud(id);
+    }
+  } catch (err) {
+    console.error('[AURA Anular Solicitud Error]', err);
+    showToast('Error al anular solicitud: ' + err.message, 'warning');
+  }
+};
+
+// ==========================================
+// CONTROLADORES: BORRADORES EN AWS DYNAMODB
+// ==========================================
+window.recargarBorradoresApi = async function() {
+  if (!window.apiService) return;
+  try {
+    const res = await window.apiService.getBorradores();
+    if (res && Array.isArray(res.borradores)) {
+      state.borradoresRemotos = res.borradores;
+      // Normalizar e integrar en state.solicitudes
+      const draftsNormalizados = res.borradores.map(b => ({
+        id: b.id || b.draftId,
+        descripcion: b.description || b.descripcion || 'Borrador sin título',
+        solicitante: b.applicant || (state.currentUser ? state.currentUser.name : 'Carlos Mendoza'),
+        departamento: b.department || b.departamento || 'DEP-TI',
+        proveedor: b.proveedorId || b.proveedor || 'Sin asignar',
+        total: Number(b.amount || b.monto || 0),
+        estado: 'borrador',
+        fecha: 'Borrador',
+        items: b.articulos || b.items || [],
+        version: b.version || 1,
+        submitVersion: b.submitVersion || b.version || 1
+      }));
+      // Filtrar solicitudes anteriores para no duplicar borradores
+      state.solicitudes = state.solicitudes.filter(s => s.estado !== 'borrador');
+      state.solicitudes = [...draftsNormalizados, ...state.solicitudes];
+      render();
+    }
+  } catch (err) {
+    console.warn('[AURA Borradores API]', err.message);
+  }
+};
+
+
+// ==========================================
+// CONTROLADORES: PROVEEDORES (API AWS / CRUD)
+// ==========================================
+window.recargarProveedoresApi = async function() {
+  if (!window.apiService) return;
+  try {
+    const res = await window.apiService.getProveedores();
+    const lista = (res && res.proveedores) ? res.proveedores : (Array.isArray(res) ? res : []);
+    if (lista.length > 0) {
+      state.proveedores = lista.map(p => ({
+        id: p.id || p.proveedorId,
+        nombre: p.name || p.nombre || p.legalName,
+        legalName: p.legalName || p.name,
+        taxId: p.taxId || '',
+        bankName: p.bankName || '',
+        bankAccount: p.bankAccount || '',
+        categoria: p.category || p.categoria || 'Servicios',
+        contacto: p.contactEmail || p.contacto || '',
+        telefono: p.phone || p.telefono || '',
+        estado: p.status === 'ACTIVE' ? 'Calificado' : (p.status || 'Calificado'),
+        status: p.status || 'ACTIVE',
+        calificacion: p.calificacion || 4.5,
+        version: p.version || 1
+      }));
+      render();
+    }
+  } catch (err) {
+    console.warn('[AURA Proveedores API]', err.message);
+  }
 };

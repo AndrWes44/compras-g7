@@ -1,6 +1,6 @@
 /**
  * Test Suite Riguroso - AURA Compras Frontend Modules
- * Valida Fase 1 (Config & API Client), Fase 2 (Auth Service) y Fase 3 (Normalizador de Datos)
+ * Valida Fase 1 (Config & API Client), Fase 2 (Auth Service con Access Tokens reales de AWS) y Fase 3 (Validaciones)
  */
 
 const assert = require('assert');
@@ -70,7 +70,7 @@ async function runAll() {
     assert.strictEqual(window.AURA_CONFIG.apiBaseUrl, defaultUrl);
   });
 
-  // --- PRUEBAS FASE 2: AUTH SERVICE (RBAC & TOKENS) ---
+  // --- PRUEBAS FASE 2: AUTH SERVICE (RBAC & ACCESS TOKENS REALES) ---
   console.log('\n--- FASE 2: Servicio de Autenticación y RBAC ---');
   await runAsyncTest('Login debe rechazar credenciales vacías', async () => {
     let failed = false;
@@ -82,25 +82,72 @@ async function runAll() {
     assert.strictEqual(failed, true, 'No debe permitir login con credenciales en blanco');
   });
 
-  await runAsyncTest('Login asigna rol Gerente según correo y genera sesión', async () => {
-    const user = await window.authService.login('gerente@g7.com', 'G7_User2026!');
+  await runAsyncTest('Login asigna rol Gerente según respuesta real de Cognito/API y genera sesión con Access Token', async () => {
+    // Simular respuesta del backend c4d9ee1 (Cognito Access Token)
+    global.fetch = async (url) => {
+      if (url.includes('/api/auth/login')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            tokens: {
+              accessToken: 'eyJraWQiOiJnYXV0aCIsImFsZyI6IlJTMjU2In0.test-gerente-access-token',
+              expiresIn: 3600
+            },
+            user: {
+              sub: 'usr-gerente-123',
+              email: 'gerente@g7.com',
+              name: 'Ing. Herberth',
+              roles: ['Gerente'],
+              role: 'Gerente',
+              isAdmin: false
+            }
+          })
+        };
+      }
+      return { ok: false, status: 404 };
+    };
+
+    const user = await window.authService.login('gerente@g7.com', 'Password123!');
     assert.strictEqual(user.role, 'gerente');
-    assert.strictEqual(user.cognitoGroup, 'Gerente');
     assert.strictEqual(window.authService.isAuthenticated(), true);
-    assert(window.authService.getIdToken().startsWith('cognito-jwt-gerente-'));
+    assert.strictEqual(window.authService.getAccessToken(), 'eyJraWQiOiJnYXV0aCIsImFsZyI6IlJTMjU2In0.test-gerente-access-token');
   });
 
   await runAsyncTest('Login asigna rol Director para solicitudes de alto monto', async () => {
-    const user = await window.authService.login('director@g7.com', 'G7_User2026!');
+    global.fetch = async (url) => {
+      if (url.includes('/api/auth/login')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            tokens: {
+              accessToken: 'eyJraWQiOiJnYXV0aCIsImFsZyI6IlJTMjU2In0.test-director-access-token',
+              expiresIn: 3600
+            },
+            user: {
+              sub: 'usr-director-456',
+              email: 'director@g7.com',
+              name: 'Director General',
+              roles: ['Director'],
+              role: 'Director',
+              isAdmin: false
+            }
+          })
+        };
+      }
+      return { ok: false, status: 404 };
+    };
+
+    const user = await window.authService.login('director@g7.com', 'Password123!');
     assert.strictEqual(user.role, 'director');
-    assert.strictEqual(user.cognitoGroup, 'Director');
-    assert(window.authService.getIdToken().startsWith('cognito-jwt-director-'));
+    assert.strictEqual(window.authService.getAccessToken(), 'eyJraWQiOiJnYXV0aCIsImFsZyI6IlJTMjU2In0.test-director-access-token');
   });
 
   test('Logout purga sessionStorage y localStorage completamente', () => {
     window.authService.logout();
     assert.strictEqual(window.authService.isAuthenticated(), false);
-    assert.strictEqual(window.authService.getIdToken(), null);
+    assert.strictEqual(window.authService.getAccessToken(), null);
   });
 
   // --- PRUEBAS FASE 3: API SERVICE VALIDATION ---
