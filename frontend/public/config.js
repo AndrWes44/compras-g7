@@ -11,12 +11,15 @@
     : 'http://127.0.0.1:3000';
   const DEFAULT_API_URL = browserOrigin;
 
+  // URL oficial definitiva de la API Express en AWS API Gateway
+  const AWS_PRODUCTION_API_URL = 'https://6pkbutuqre.execute-api.us-east-2.amazonaws.com';
+
   const savedUrl = localStorage.getItem('AURA_API_URL');
   const savedMode = localStorage.getItem('AURA_OFFLINE_FALLBACK');
 
   window.AURA_CONFIG = {
-    // URL base de la API Express
-    apiBaseUrl: savedUrl !== null ? savedUrl : DEFAULT_API_URL,
+    // URL base de la API Express (prioriza la API pública de AWS por defecto)
+    apiBaseUrl: savedUrl !== null ? savedUrl : AWS_PRODUCTION_API_URL,
 
     // Región AWS oficial del proyecto
     awsRegion: 'us-east-2',
@@ -56,11 +59,11 @@
       localStorage.removeItem('AURA_OFFLINE_FALLBACK');
       localStorage.removeItem('AURA_COGNITO_USER_POOL_ID');
       localStorage.removeItem('AURA_COGNITO_CLIENT_ID');
-      this.apiBaseUrl = DEFAULT_API_URL;
-      this.offlineFallback = true;
-      this.cognito.userPoolId = '';
-      this.cognito.clientId = '';
-      console.log('[AURA Config] Configuración restablecida a valores predeterminados.');
+      this.apiBaseUrl = AWS_PRODUCTION_API_URL;
+      this.offlineFallback = false;
+      this.cognito.userPoolId = 'us-east-2_mLXBZVjc5';
+      this.cognito.clientId = '2uu105iq0qdd09knlc7cjk61c7';
+      console.log('[AURA Config] Configuración restablecida a valores predeterminados de producción en AWS.');
     }
   };
 })();

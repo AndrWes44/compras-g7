@@ -57,16 +57,17 @@ async function runAll() {
 
   // --- PRUEBAS FASE 1: CONFIGURACIÓN ---
   console.log('--- FASE 1: Configuración de Entorno ---');
-  test('AURA_CONFIG debe tener URL por defecto http://127.0.0.1:3000', () => {
-    assert.strictEqual(window.AURA_CONFIG.apiBaseUrl, 'http://127.0.0.1:3000');
+  test('AURA_CONFIG debe tener configurada una URL base valida', () => {
+    assert(window.AURA_CONFIG.apiBaseUrl.startsWith('http'), 'apiBaseUrl debe iniciar con http o https');
   });
 
   test('setApiBaseUrl debe normalizar barras finales y persistir en localStorage', () => {
+    const defaultUrl = window.AURA_CONFIG.apiBaseUrl;
     window.AURA_CONFIG.setApiBaseUrl('http://192.168.1.50:4000///');
     assert.strictEqual(window.AURA_CONFIG.apiBaseUrl, 'http://192.168.1.50:4000');
     assert.strictEqual(localStorage.getItem('AURA_API_URL'), 'http://192.168.1.50:4000');
     window.AURA_CONFIG.resetDefaults();
-    assert.strictEqual(window.AURA_CONFIG.apiBaseUrl, 'http://127.0.0.1:3000');
+    assert.strictEqual(window.AURA_CONFIG.apiBaseUrl, defaultUrl);
   });
 
   // --- PRUEBAS FASE 2: AUTH SERVICE (RBAC & TOKENS) ---

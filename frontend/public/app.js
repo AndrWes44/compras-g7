@@ -588,9 +588,16 @@ function renderDashboard() {
   const isDirector = state.currentRole === 'director';
   const isCompras = state.currentRole === 'compras';
 
-  // Filtrado de solicitudes según el rol
+  // Filtrado de solicitudes según el rol:
+  // Si es Solicitante, concuerda por nombre o por correo (ej: Carlos Mendoza / solicitante@g7.com)
+  const currentEmail = state.users[state.currentRole]?.email?.toLowerCase() || '';
+  const currentName = state.users[state.currentRole]?.name?.toLowerCase() || '';
+
   const solicitudesRol = isSolicitante 
-    ? state.solicitudes.filter(s => s.solicitante === 'Carlos Mendoza')
+    ? state.solicitudes.filter(s => {
+        const sOwner = (s.solicitante || '').toLowerCase();
+        return sOwner === currentEmail || sOwner === currentName || sOwner.includes('carlos') || sOwner.includes('solicitante');
+      })
     : state.solicitudes;
 
   const countTotal = solicitudesRol.length;
