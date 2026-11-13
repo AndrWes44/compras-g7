@@ -58,32 +58,55 @@
     }
 
     /**
-     * Login contra Amazon Cognito (vía API o cliente Cognito directo)
+     * Login estricto contra Amazon Cognito (vía API backend Express en AWS)
      */
     async login(email, password) {
       if (!email || !password) {
         throw new Error('Debe proporcionar correo y contraseña.');
       }
 
-      // Si Héctor y Dev 2 habilitan el endpoint /api/auth/login en Express:
-      if (window.AURA_CONFIG && window.AURA_CONFIG.cognito.userPoolId) {
-        try {
-          const res = await fetch(`${window.AURA_CONFIG.apiBaseUrl}/api/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
-          });
-          if (res.ok) {
-            const data = await res.json();
-            this.setSession(data.tokens, data.user);
-            return data.user;
-          }
-        } catch (err) {
-          console.warn('[AURA Auth] Falla en endpoint remoto Cognito:', err.message);
+      const apiUrl = (window.AURA_CONFIG && window.AURA_CONFIG.apiBaseUrl) || 'https://6pkbutuqre.execute-api.us-east-2.amazonaws.com';
+
+      // 1. Intentar autenticación real contra el endpoint en AWS
+      try {
+        const res = await fetch(`${apiUrl}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim().toLowerCase(), password })
+        });
+
+        const data = await res.json().catch(() => null);
+
+        if (res.ok && data && data.tokens) {
+          this.setSession(data.tokens, data.user);
+          return data.user;
         }
+
+        // Si la API respondió con error de credenciales o desafío
+        if (res.status === 401 || res.status === 400 || res.status === 403) {
+          throw new Error(data?.mensaje || 'Credenciales de Cognito incorrectas.');
+        }
+
+        if (res.status === 409) {
+          throw new Error('La cuenta requiere completar un desafío de Cognito (cambio inicial de contraseña).');
+        }
+
+        // Otros errores del servidor
+        throw new Error(data?.mensaje || `Error del servidor AWS (HTTP ${res.status}).`);
+      } catch (err) {
+        // En modo estricto de producción (offlineFallback: false):
+        // NO generar sesión simulada. El login DEBE fallar honestamente informando el error de red o de autenticación.
+        if (!window.AURA_CONFIG || !window.AURA_CONFIG.offlineFallback) {
+          if (err.name === 'TypeError' || err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+            throw new Error('No se pudo conectar con el servidor de autenticación en AWS (posible bloqueo de CORS o red).');
+          }
+          throw err;
+        }
+
+        console.warn('[AURA Auth] Falla en endpoint remoto Cognito, usando fallback local:', err.message);
       }
 
-      // Autenticación controlada y segura para perfiles oficiales de Cognito (Grupo 7)
+      // Fallback local SOLO si offlineFallback está explícitamente habilitado en desarrollo
       const normalizedEmail = email.trim().toLowerCase();
       let role = 'solicitante';
       let name = 'Carlos Mendoza';
@@ -115,7 +138,6 @@
         cognitoGroup
       };
 
-      // Generación de token JWT de sesión con claims de grupo Cognito
       const idToken = `cognito-jwt-${cognitoGroup.toLowerCase()}-${Date.now()}`;
       this.setSession({ idToken, accessToken: idToken }, user);
 
