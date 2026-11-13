@@ -279,26 +279,43 @@ async function runFase8Tests() {
     let createSolicitudInvocado = false;
     let updateBorradorInvocado = false;
     let enviarBorradorInvocado = false;
+    let versionRecibidaEnEnviar = null;
 
     window.apiService.createSolicitud = async () => {
       createSolicitudInvocado = true;
       return { success: true, requestId: 'REQ-ERRONEO' };
     };
 
+    // El contrato del backend incrementa version 3 -> 4
     window.apiService.updateBorrador = async (id, patch, ver) => {
       updateBorradorInvocado = true;
       assert.strictEqual(id, borradorId);
-      assert.strictEqual(ver, 3);
-      return { success: true };
+      assert.strictEqual(ver, 3, 'El PATCH debe enviarse con la versión inicial 3');
+      return {
+        success: true,
+        borrador: {
+          id: borradorId,
+          version: 4,
+          amount: 80,
+          description: patch.description
+        }
+      };
     };
 
     window.apiService.enviarBorrador = async (id, ver) => {
       enviarBorradorInvocado = true;
+      versionRecibidaEnEnviar = ver;
       assert.strictEqual(id, borradorId);
-      return { success: true, requestId: 'REQ-ENVIADO-OK', executionArn: 'arn:aws:states:demo' };
+      if (ver === 3) {
+        const err = new Error('HTTP 409 Conflict: Borrador desactualizado (versión 3 vs 4)');
+        err.status = 409;
+        throw err;
+      }
+      return { success: true, requestId: 'REQ-ENVIADO-OK', executionArn: 'arn:aws:states:demo', submitVersion: 4 };
     };
 
     window.apiService.getSolicitudRegistro = async () => ({ success: true, estado: 'PERSISTED' });
+    window.recargarSolicitudesApi = async () => {};
 
     // Simular evento submit del formulario
     const fakeEvent = {
@@ -321,6 +338,7 @@ async function runFase8Tests() {
     assert.strictEqual(createSolicitudInvocado, false, 'CERO llamadas a createSolicitud al enviar desde edición');
     assert.strictEqual(updateBorradorInvocado, true, 'Debe haber llamado a updateBorrador con PATCH');
     assert.strictEqual(enviarBorradorInvocado, true, 'Debe haber llamado a enviarBorrador');
+    assert.strictEqual(versionRecibidaEnEnviar, 4, 'enviarBorrador DEBE recibir la versión 4 incrementada por el PATCH, no la 3');
     assert.strictEqual(window.state.editingDraftId, null, 'editingDraftId debe quedar limpio');
   });
 

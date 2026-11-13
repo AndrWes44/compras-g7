@@ -2391,20 +2391,42 @@ window.handleCrearSolicitud = async function(e) {
       if (state.editingDraftId) {
         const draftId = state.editingDraftId;
         const existingDraft = state.solicitudes.find(s => s.id === draftId);
-        const version = existingDraft ? (existingDraft.version || 1) : 1;
+        const versionActual = existingDraft ? (existingDraft.version || 1) : 1;
 
-        // 1. Guardar cambios con PATCH
-        await window.apiService.updateBorrador(draftId, {
+        // 1. Guardar cambios con PATCH y obtener la nueva versión incrementada por DynamoDB
+        const patchRes = await window.apiService.updateBorrador(draftId, {
           description: desc,
           department: dep,
           proveedorId: provId,
           amount: total,
           articulos: itemsPayload
-        }, version);
+        }, versionActual);
 
-        // 2. Enviar el borrador a aprobación
-        const sendRes = await window.apiService.enviarBorrador(draftId, version);
+        const versionIncrementada = Number(
+          (patchRes && (patchRes.borrador?.version || patchRes.version)) || (versionActual + 1)
+        );
+
+        // Actualizar versión en el objeto en memoria por si el envío posterior necesita reintento
+        if (existingDraft) {
+          existingDraft.version = versionIncrementada;
+          existingDraft.submitVersion = versionIncrementada;
+        }
+
+        // 2. Enviar el borrador a aprobación con la versión nueva
+        let sendRes;
+        try {
+          sendRes = await window.apiService.enviarBorrador(draftId, versionIncrementada);
+        } catch (sendErr) {
+          // Si falla el envío, actualizar metadatos para permitir reintento de la misma operación
+          if (existingDraft) {
+            existingDraft.version = versionIncrementada;
+            existingDraft.submitVersion = versionIncrementada;
+          }
+          throw sendErr;
+        }
+
         const reqId = (sendRes && (sendRes.requestId || sendRes.id)) || draftId;
+        const finalSubmitVersion = Number(sendRes && (sendRes.submitVersion || sendRes.version || versionIncrementada));
 
         showToast(`Borrador ${draftId} promovido y enviado a revisión (${reqId}, HTTP 202).`, 'success');
 
@@ -2431,8 +2453,8 @@ window.handleCrearSolicitud = async function(e) {
           proveedorId: provId,
           proveedor: provObj ? provObj.nombre : provId,
           executionArn: sendRes.executionArn || '',
-          version: version,
-          submitVersion: Number(sendRes.submitVersion || version)
+          version: versionIncrementada,
+          submitVersion: finalSubmitVersion
         });
 
         // Reemplazar o retirar el borrador original de state.solicitudes para que no quede duplicado
