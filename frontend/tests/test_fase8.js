@@ -192,6 +192,12 @@ async function runFase8Tests() {
       }
     ];
 
+    let getSolicitudRegistroLlamado = false;
+    window.apiService.getSolicitudRegistro = async (reqId) => {
+      getSolicitudRegistroLlamado = true;
+      return { success: true, estado: 'PERSISTED', requestId: reqId };
+    };
+
     let apiLlamada = false;
     let versionEnviada = null;
     window.apiService.enviarBorrador = async (id, version) => {
@@ -212,6 +218,136 @@ async function runFase8Tests() {
     const actualizado = window.state.solicitudes.find(s => s.id === 'REQ-APPROVED-202');
     assert(actualizado, 'El elemento debe haber actualizado su id al requestId oficial');
     assert.strictEqual(actualizado.estado, 'en_revision');
+    assert.strictEqual(getSolicitudRegistroLlamado, true, 'Debe haber consultado la persistencia de registro');
+  });
+
+  // Test 5: Reabrir y editar un borrador con precioUnitario normaliza el modelo a precio y calcula el total correctamente
+  await itAsync('Al cargar/editar borrador con precioUnitario, se normaliza a precio y el total no se pierde', async () => {
+    const borradorId = 'DRAFT-PRECIO-001';
+    window.state.solicitudes = [
+      {
+        id: borradorId,
+        descripcion: 'Borrador con precioUnitario',
+        departamento: 'DEP-TI',
+        proveedorId: 'PRV-001',
+        total: 25,
+        monto: 25,
+        estado: 'borrador',
+        version: 1,
+        items: [
+          { nombre: 'Teclado USB', cantidad: 1, precioUnitario: 25, subtotal: 25 }
+        ]
+      }
+    ];
+
+    window.editarBorrador(borradorId);
+
+    assert.strictEqual(window.state.editingDraftId, borradorId);
+    assert.strictEqual(window.state.nuevaSolicitudForm.items.length, 1);
+    assert.strictEqual(window.state.nuevaSolicitudForm.items[0].precio, 25, 'El precio debe ser 25 y no indefinido o cero');
+    assert.strictEqual(window.state.nuevaSolicitudForm.items[0].precioUnitario, 25);
+    const totalCalc = window.state.nuevaSolicitudForm.items.reduce((acc, it) => acc + (it.cantidad * it.precio), 0);
+    assert.strictEqual(totalCalc, 25, 'El total calculado del formulario debe ser 25');
+  });
+
+  // Test 6: Enviar desde edición de borrador actualiza (PATCH) y envía el mismo borrador sin crear solicitud directa
+  await itAsync('Enviar desde edición de borrador ejecuta updateBorrador + enviarBorrador y CERO createSolicitud', async () => {
+    const borradorId = 'DRAFT-EDIT-005';
+    window.state.solicitudes = [
+      {
+        id: borradorId,
+        descripcion: 'Borrador para enviar desde edición',
+        departamento: 'DEP-TI',
+        proveedorId: 'PRV-001',
+        total: 80,
+        estado: 'borrador',
+        version: 3,
+        submitVersion: 3,
+        items: [{ nombre: 'Monitor', cantidad: 1, precio: 80, subtotal: 80 }]
+      }
+    ];
+
+    window.state.editingDraftId = borradorId;
+    window.state.nuevaSolicitudForm = {
+      descripcion: 'Borrador modificado',
+      departamento: 'DEP-TI',
+      proveedor: 'Proveedor Demo',
+      proveedorId: 'PRV-001',
+      items: [{ nombre: 'Monitor', cantidad: 1, precio: 80, subtotal: 80 }]
+    };
+
+    let createSolicitudInvocado = false;
+    let updateBorradorInvocado = false;
+    let enviarBorradorInvocado = false;
+
+    window.apiService.createSolicitud = async () => {
+      createSolicitudInvocado = true;
+      return { success: true, requestId: 'REQ-ERRONEO' };
+    };
+
+    window.apiService.updateBorrador = async (id, patch, ver) => {
+      updateBorradorInvocado = true;
+      assert.strictEqual(id, borradorId);
+      assert.strictEqual(ver, 3);
+      return { success: true };
+    };
+
+    window.apiService.enviarBorrador = async (id, ver) => {
+      enviarBorradorInvocado = true;
+      assert.strictEqual(id, borradorId);
+      return { success: true, requestId: 'REQ-ENVIADO-OK', executionArn: 'arn:aws:states:demo' };
+    };
+
+    window.apiService.getSolicitudRegistro = async () => ({ success: true, estado: 'PERSISTED' });
+
+    // Simular evento submit del formulario
+    const fakeEvent = {
+      preventDefault: () => {},
+      target: { querySelector: () => null }
+    };
+    // Mock getElementById para los campos
+    const originalGetElementById = document.getElementById;
+    document.getElementById = (id) => {
+      if (id === 'solicitud-desc') return { value: 'Borrador modificado' };
+      if (id === 'solicitud-dep') return { value: 'DEP-TI' };
+      if (id === 'solicitud-prov') return { value: 'PRV-001' };
+      return originalGetElementById(id);
+    };
+
+    await window.handleCrearSolicitud(fakeEvent);
+
+    document.getElementById = originalGetElementById;
+
+    assert.strictEqual(createSolicitudInvocado, false, 'CERO llamadas a createSolicitud al enviar desde edición');
+    assert.strictEqual(updateBorradorInvocado, true, 'Debe haber llamado a updateBorrador con PATCH');
+    assert.strictEqual(enviarBorradorInvocado, true, 'Debe haber llamado a enviarBorrador');
+    assert.strictEqual(window.state.editingDraftId, null, 'editingDraftId debe quedar limpio');
+  });
+
+  // Test 7: Documento REGISTERING no debe permitirse editar ni eliminar
+  await itAsync('Documento en estado REGISTERING bloquea edición y eliminación', async () => {
+    const borradorId = 'DRAFT-REG-999';
+    window.state.solicitudes = [
+      {
+        id: borradorId,
+        descripcion: 'Borrador en vuelo',
+        status: 'REGISTERING',
+        estado: 'en_revision',
+        version: 1,
+        items: [{ nombre: 'Switch', cantidad: 1, precio: 500, subtotal: 500 }]
+      }
+    ];
+
+    window.state.editingDraftId = null;
+    window.editarBorrador(borradorId);
+    assert.strictEqual(window.state.editingDraftId, null, 'No debe asignar editingDraftId para REGISTERING');
+
+    let deleteInvocado = false;
+    window.apiService.deleteBorrador = async () => {
+      deleteInvocado = true;
+    };
+    await window.eliminarBorrador(borradorId, 1);
+    assert.strictEqual(deleteInvocado, false, 'No debe invocar deleteBorrador para REGISTERING');
   });
 
   console.log('\n===============================================================');

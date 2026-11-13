@@ -1380,7 +1380,7 @@ function renderDetalleSolicitud() {
               </span>
             </div>
           </div>
-        ` : item.estado === 'borrador' ? `
+        ` : (item.estado === 'borrador' && item.status !== 'REGISTERING') ? `
           <div class="p-4 rounded-xl border bg-slate-800/80 border-slate-600 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-slate-300">
             <div class="flex items-center gap-3">
               <i class="fa-solid fa-file-pen text-amber-400 text-xl"></i>
@@ -1405,6 +1405,24 @@ function renderDetalleSolicitud() {
                 </button>
               </div>
             ` : ''}
+          </div>
+        ` : (item.status === 'REGISTERING') ? `
+          <div class="p-4 rounded-xl border bg-purple-500/15 border-purple-500/40 text-purple-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+              <div class="w-6 h-6 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center shrink-0">
+                <i class="fa-solid fa-spinner fa-spin text-purple-400 text-xs"></i>
+              </div>
+              <div>
+                <span class="text-xs font-bold text-white block">Envío en Proceso (REGISTERING)</span>
+                <span class="text-[11px] text-purple-300/80">Documento enviado a AWS Step Functions. Sincronizando persistencia oficial (v${item.submitVersion || item.version || 1}).</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="verificarPersistenciaRegistro('${item.requestId || item.id}')" class="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow transition-all flex items-center gap-1.5">
+                <i class="fa-solid fa-rotate text-[10px]"></i>
+                <span>Verificar Estado</span>
+              </button>
+            </div>
           </div>
         ` : `
           <div class="p-3.5 rounded-xl border flex items-center gap-3 ${
@@ -1601,6 +1619,9 @@ function renderColorSwatch(hex, name, token) {
 // ----------------- HELPERS VISUALES -----------------
 function renderBadgeEstado(estado) {
   switch (estado ? estado.toLowerCase() : '') {
+    case 'registering':
+      return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-purple-500/15 text-purple-300 border border-purple-500/30">
+        <span class="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse"></span>Registrando (HTTP 202)</span>`;
     case 'anulado':
       return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-700/60 text-slate-300 border border-slate-600">
         <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Anulado (CANCELLED)</span>`;
@@ -2203,18 +2224,43 @@ window.editarBorrador = function(id) {
     showToast('Borrador no encontrado.', 'warning');
     return;
   }
+  const statusStr = String(s.status || s.estado || '').toUpperCase();
+  if (statusStr === 'REGISTERING') {
+    showToast(`El borrador ${id} se encuentra en proceso de registro en AWS (REGISTERING) y no puede ser editado.`, 'warning');
+    return;
+  }
   state.editingDraftId = id;
+  const rawItems = (s.items && s.items.length > 0) ? s.items : [{ nombre: '', cantidad: 1, precio: 0, subtotal: 0 }];
+  const itemsNormalizados = rawItems.map(it => {
+    const cantidad = Number(it.cantidad || it.quantity || 1);
+    const precio = Number(it.precio !== undefined ? it.precio : (it.precioUnitario !== undefined ? it.precioUnitario : (it.unitPrice !== undefined ? it.unitPrice : 0)));
+    const subtotal = Number(it.subtotal !== undefined ? it.subtotal : (cantidad * precio));
+    return {
+      nombre: it.nombre || it.name || it.descripcion || '',
+      cantidad,
+      precio,
+      precioUnitario: precio,
+      subtotal
+    };
+  });
+
   state.nuevaSolicitudForm = {
     descripcion: s.descripcion || '',
     departamento: s.departamento || 'DEP-TI',
     proveedor: s.proveedor || '',
     proveedorId: s.proveedorId || '',
-    items: (s.items && s.items.length > 0) ? JSON.parse(JSON.stringify(s.items)) : [{ nombre: '', cantidad: 1, precio: 0, subtotal: 0 }]
+    items: itemsNormalizados
   };
   navigateTo('nueva_solicitud');
 };
 
 window.eliminarBorrador = async function(id, version) {
+  const existing = state.solicitudes.find(s => s.id === id);
+  const statusStr = String(existing?.status || existing?.estado || '').toUpperCase();
+  if (statusStr === 'REGISTERING') {
+    showToast(`El documento ${id} está en proceso de registro en AWS (REGISTERING) y no puede ser eliminado.`, 'warning');
+    return;
+  }
   if (typeof confirm === 'function' && !confirm(`¿Estás seguro de eliminar permanentemente este borrador (${id}) de DynamoDB?`)) {
     return;
   }
@@ -2334,6 +2380,75 @@ window.handleCrearSolicitud = async function(e) {
 
   if (window.apiService) {
     try {
+      const itemsPayload = state.nuevaSolicitudForm.items.map(it => ({
+        nombre: (it.nombre || '').trim() || 'Partida',
+        cantidad: Number(it.cantidad || 1),
+        precioUnitario: Number(it.precio !== undefined ? it.precio : (it.precioUnitario || 0)),
+        precio: Number(it.precio !== undefined ? it.precio : (it.precioUnitario || 0))
+      }));
+
+      // Si estamos editando un borrador existente, actualizarlo y enviarlo directamente
+      if (state.editingDraftId) {
+        const draftId = state.editingDraftId;
+        const existingDraft = state.solicitudes.find(s => s.id === draftId);
+        const version = existingDraft ? (existingDraft.version || 1) : 1;
+
+        // 1. Guardar cambios con PATCH
+        await window.apiService.updateBorrador(draftId, {
+          description: desc,
+          department: dep,
+          proveedorId: provId,
+          amount: total,
+          articulos: itemsPayload
+        }, version);
+
+        // 2. Enviar el borrador a aprobación
+        const sendRes = await window.apiService.enviarBorrador(draftId, version);
+        const reqId = (sendRes && (sendRes.requestId || sendRes.id)) || draftId;
+
+        showToast(`Borrador ${draftId} promovido y enviado a revisión (${reqId}, HTTP 202).`, 'success');
+
+        // Limpiar estado de edición y formulario
+        state.editingDraftId = null;
+        state.nuevaSolicitudForm = {
+          descripcion: '',
+          departamento: 'DEP-TI',
+          proveedor: '',
+          proveedorId: '',
+          items: [{ nombre: '', cantidad: 1, precio: 0, subtotal: 0 }]
+        };
+
+        const provObj = state.proveedores.find(p => p.id === provId);
+        const optimista = window.normalizarSolicitudDesdeApi({
+          requestId: reqId,
+          description: desc,
+          applicant: (state.currentUser && (state.currentUser.name || state.currentUser.email)) || 'Carlos Mendoza',
+          applicantSub: (state.currentUser && state.currentUser.sub) || null,
+          department: dep,
+          amount: total,
+          status: 'PENDING_APPROVAL',
+          items: itemsPayload,
+          proveedorId: provId,
+          proveedor: provObj ? provObj.nombre : provId,
+          executionArn: sendRes.executionArn || '',
+          version: version,
+          submitVersion: Number(sendRes.submitVersion || version)
+        });
+
+        // Reemplazar o retirar el borrador original de state.solicitudes para que no quede duplicado
+        state.solicitudes = state.solicitudes.filter(s => s.id !== draftId && s.id !== reqId);
+        state.solicitudes.unshift(optimista);
+
+        if (state.borradoresRemotos) {
+          state.borradoresRemotos = state.borradoresRemotos.filter(b => (b.id || b.draftId) !== draftId);
+        }
+
+        navigateTo('solicitudes');
+        window.verificarPersistenciaRegistro(reqId);
+        return;
+      }
+
+      // Si NO es edición de borrador, crear solicitud directa
       const res = await window.apiService.createSolicitud({
         descripcion: desc,
         departamento: dep,
@@ -2656,8 +2771,27 @@ window.recargarBorradoresApi = async function() {
       const draftsNormalizados = res.borradores.map(b => {
         const monto = Number(b.amount || b.monto || 0);
         const provObj = state.proveedores.find(p => p.id === (b.proveedorId || b.proveedor));
+        const rawItems = b.articulos || b.items || [];
+        const itemsNormalizados = Array.isArray(rawItems) ? rawItems.map(it => {
+          const cantidad = Number(it.cantidad || it.quantity || 1);
+          const precio = Number(it.precio !== undefined ? it.precio : (it.precioUnitario !== undefined ? it.precioUnitario : (it.unitPrice !== undefined ? it.unitPrice : 0)));
+          const subtotal = Number(it.subtotal !== undefined ? it.subtotal : (cantidad * precio));
+          return {
+            nombre: it.nombre || it.name || it.descripcion || 'Partida',
+            cantidad,
+            precio,
+            precioUnitario: precio,
+            subtotal
+          };
+        }) : [];
+
+        const statusRaw = String(b.status || b.estado || '').toUpperCase();
+        const isRegistering = statusRaw === 'REGISTERING';
+
         return {
           id: b.id || b.draftId,
+          draftId: b.draftId || b.id,
+          requestId: b.requestId || null,
           descripcion: b.description || b.descripcion || 'Borrador sin título',
           solicitante: b.applicant || (state.currentUser ? state.currentUser.name : 'Carlos Mendoza'),
           applicantSub: b.applicantSub || (state.currentUser ? state.currentUser.sub : null),
@@ -2666,9 +2800,10 @@ window.recargarBorradoresApi = async function() {
           proveedor: (provObj ? provObj.nombre : (b.proveedor || b.proveedorId)) || 'Proveedor Asignado',
           total: monto,
           monto: monto,
-          estado: 'borrador',
-          fecha: 'Borrador',
-          items: b.articulos || b.items || [],
+          estado: isRegistering ? 'en_revision' : 'borrador',
+          status: b.status || (isRegistering ? 'REGISTERING' : 'DRAFT'),
+          fecha: isRegistering ? 'Registrando...' : 'Borrador',
+          items: itemsNormalizados,
           version: Number(b.version || 1),
           submitVersion: Number(b.submitVersion || b.version || 1),
           esAltoMonto: monto > 1000
