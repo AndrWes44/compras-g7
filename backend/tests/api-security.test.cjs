@@ -10,7 +10,7 @@ async function localApi(overrides, run) {
     store: { rateLimit: async () => 1, ...overrides.store },
     identity: { authenticate: async () => user, ...overrides.identity },
     workflow: overrides.workflow || {},
-    config: { origins: "http://localhost:3001" }
+    config: { origins: "http://localhost:3001", ...overrides.config }
   });
   const listener = app.listen(0, "127.0.0.1");
   await once(listener, "listening");
@@ -18,6 +18,32 @@ async function localApi(overrides, run) {
   try { await run(base); }
   finally { await new Promise(resolve => listener.close(resolve)); }
 }
+
+test("origen S3 exacto permite preflight y conserva autenticacion obligatoria", async () => {
+  const origin = "http://g7-dev-frontend-aura-021686096746.s3-website.us-east-2.amazonaws.com";
+  await localApi({ config: { origins: origin } }, async base => {
+    const preflight = await fetch(base + "/api/solicitudes", { method: "OPTIONS", headers: {
+      Origin: origin, "Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "authorization,content-type"
+    } });
+    assert.equal(preflight.status, 204);
+    assert.equal(preflight.headers.get("Access-Control-Allow-Origin"), origin);
+    assert.doesNotMatch(preflight.headers.get("Access-Control-Allow-Methods"), /PUT|DELETE/);
+    const protectedResponse = await fetch(base + "/api/solicitudes", { headers: { Origin: origin } });
+    assert.equal(protectedResponse.status, 401);
+    await protectedResponse.json();
+  });
+});
+
+test("asterisco literal en configuracion no habilita origen ajeno ni parecido al S3", async () => {
+  const origin = "http://g7-dev-frontend-aura-021686096746.s3-website.us-east-2.amazonaws.com";
+  await localApi({ config: { origins: origin + ",*" } }, async base => {
+    for (const untrusted of ["https://untrusted.example", origin + ".untrusted.example", "null"]) {
+      const response = await fetch(base + "/health", { headers: { Origin: untrusted } });
+      assert.equal(response.status, 403);
+      await response.json();
+    }
+  });
+});
 
 test("exceso por IP se rechaza antes de verificar JWT o consultar Cognito", async () => {
   let authentications = 0;

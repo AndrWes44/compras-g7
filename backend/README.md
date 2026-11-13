@@ -61,3 +61,13 @@ El frontend puede conservar sesiones simuladas, borradores y totales diferentes.
 ## Empaquetado
 
 El proyecto es privado y package.json limita el empaquetado npm a src/server.js y src/lambda.js, ademas de los metadatos y README incluidos por npm. Se comprobo con `npm pack --dry-run --json` que .env, pruebas y modulos antiguos quedan excluidos. No ejecutar npm publish. Esta lista no protege un ZIP armado manualmente: quien prepare el despliegue Lambda debe excluir explicitamente .env y credenciales e incluir las dependencias de produccion. No se genero ni publico un paquete en esta comprobacion.
+
+## Integracion con el frontend S3
+
+El origen publicado es `http://g7-dev-frontend-aura-021686096746.s3-website.us-east-2.amazonaws.com`. Esta incluido en `.env.example` para documentar la configuracion. La plantilla no se carga automaticamente en Lambda: conservar esa lista en las variables de entorno del despliegue o en la plantilla de infraestructura que administre el responsable AWS. No subir .env a Git.
+
+Usar origenes exactos y sin barra final; no agregar `*` como permiso global. El middleware actual responde OPTIONS con 204 para los origenes permitidos y rechaza los demas con 403. Solo anuncia GET, POST, PATCH y OPTIONS, que corresponden al contrato actual. API Gateway tiene su propia configuracion CORS y debe coordinarse con esta lista.
+
+Para integradores del frontend: el login devuelve `tokens.accessToken` y `user`; no devuelve un token plano en `data.token`. Un 401 por credenciales invalidas debe mostrarse como rechazo y nunca habilitar una sesion simulada. La implementacion visual y el almacenamiento de la sesion corresponden al frontend.
+
+Si la API devuelve 503 incluso en health, comprobar Lambda antes de atribuirlo a CORS. `ReservedFunctionConcurrentInvocationLimitExceeded` indica rechazo por el limite de concurrencia reservada; requiere revision de configuracion/capacidad por el responsable AWS. No se debe intentar solucionar permitiendo cualquier origen.
