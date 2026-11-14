@@ -2,6 +2,10 @@
 
 ## Pruebas AWS actuales
 
+La suite autenticada esta en `postman/aura-aws-autenticadas.postman_collection.json`; requiere variables privadas de contrasena para los cuatro roles QA. Ejecutar en orden, una iteracion, demora de 1000 ms y sin conservar variables al terminar. Crea una compra QA y la anula; tambien crea un proveedor QA que se conserva como evidencia. No ejecutar sobre datos de terceros. Resultados reales: [36 peticiones y 44 aserciones aprobadas en Postman](evidence/2026-11-14-aws-auth/README.md).
+
+Como alternativa, `python testing/aws-authenticated-smoke.py` ejecuta verificaciones HTTP directas con Python 3.12 y biblioteca estandar. Necesita `AURA_QA_CREDENTIALS` en el entorno, un JSON cuyas claves son Solicitante, Gerente, Director y Compras; cada una contiene email y password. Inyectar de forma privada, no guardar en Git. Escribe evidencia redactada en `outputs/`, omite los listados de negocio ajenos y devuelve salida no cero ante una comprobacion fallida. Las solicitudes QA creadas se anulan cuando el flujo termina correctamente; ante una interrupcion, revisar los IDs del informe antes de repetir.
+
 Para el despliegue AWS del 14 de noviembre, importar `postman/aura-aws-publicas.postman_collection.json`. Contiene siete peticiones sin credenciales validas y sus aserciones para repetir la verificacion; usar un agente capaz de enviar cabeceras Origin, como Cloud Agent o Desktop Agent. No cambiar los rechazos 401/403 esperados por credenciales validas ni aceptar sugerencias automaticas de corregirlos.
 
 Ver [resultados y limites](evidence/2026-11-14-aws/README.md). La ejecucion documentada fue individual y visual, no Collection Runner. Las instrucciones que siguen son historicas de la integracion local y no describen todo el backend AWS actual.

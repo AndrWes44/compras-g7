@@ -1,5 +1,15 @@
 # Resultados de Testing y API Integration
 
+## AWS autenticado — 14 de noviembre de 2026
+
+Con las cuentas QA de Solicitante, Gerente, Director y Compras, Collection Runner de Postman completo 36 peticiones y 44 aserciones aprobadas, sin fallos ni errores (57s 314ms). Otra corrida HTTP Python independiente verifico 36 comprobaciones conformes. No sumar ambas como si fueran casos distintos.
+
+Se verificaron login/identidad por rol, contrasena incorrecta, restricciones de acceso, borradores, incremento de versiones, conflicto 409, precios numericos, envio, reintento del mismo requestId, persistencia PERSISTED y anulacion. Cada corrida creo su propia compra QA de USD 25 y la anulo. Quedan los dos proveedores QA y los borradores enviados como evidencia.
+
+Limites: falta una segunda cuenta Solicitante para probar aislamiento entre usuarios del mismo rol. El bloqueo de PATCH se observo con el borrador ya SUBMITTED, no dentro de la ventana transitoria REGISTERING. No se certificaron frontend, aprobaciones por umbrales ni administracion de altas.
+
+Ver [detalle y evidencia redactada](evidence/2026-11-14-aws-auth/README.md), [resumen observado de Postman](evidence/2026-11-14-aws-auth/postman-summary.json) y [coleccion autenticada sin secretos](../postman/aura-aws-autenticadas.postman_collection.json). Las capturas permanecen locales.
+
 ## AWS en Postman — 14 de noviembre de 2026
 
 Se enviaron individualmente siete peticiones desde Postman web con Cloud Agent contra `https://6pkbutuqre.execute-api.us-east-2.amazonaws.com`. Verificacion visual: salud 200; solicitudes y borradores sin token 401; Authorization invalida 401; preflight permitido 204 con origen exacto; origen ajeno 403; login ficticio 401. Todos los codigos coincidieron con lo esperado. No se ejecuto Collection Runner ni se presenta un conteo de aserciones de esta sesion.

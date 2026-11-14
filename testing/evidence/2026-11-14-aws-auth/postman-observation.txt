@@ -1,0 +1,117 @@
+Browser tab: 143234514, Title: "AURA AWS - QA autenticado - DIEGO ENRIQUE MATUTE PEÑA's Workspace", URL: "https://diego-matute-7567409.postman.co/workspace/DIEGO-ENRIQUE-MATUTE-PE%25C3%2591A's-Wor~43586f08-5a32-4795-8e67-43bdedf20922/run/60021686-205dba9d-7d5b-467b-aedb-e620002b64cc?activeTestTab=all".
+The following is a diff from the previous accessibility tree with ~ and + representing changed and added elements, respectively. Removed elements are summarized by ID range.
+Removed element IDs: 643-717
+~						642 text RUN SUMMARY
++						643 tab group
++							644 tab (selectable, settable, boolean) List, Value: 0, ID: tab-B3MxL0-0
++							645 tab (selected, settable, boolean) Grid, Value: 1, ID: tab-B3MxL0-1
++						646 text 1
++						647 container
++							648 image
++							649 text POST 01. Login Solicitante 1  |  0
++						650 container
++							651 image
++							652 text POST 02. Login Gerente 1  |  0
++						653 container
++							654 image
++							655 text POST 03. Login Director 1  |  0
++						656 container
++							657 image
++							658 text POST 04. Login Compras 1  |  0
++						659 container
++							660 image
++							661 text GET 05. Identidad Solicitante 2  |  0
++						662 container
++							663 image
++							664 text GET 06. Identidad Gerente 2  |  0
++						665 container
++							666 image
++							667 text GET 07. Identidad Director 2  |  0
++						668 container
++							669 image
++							670 text GET 08. Identidad Compras 2  |  0
++						671 container
++							672 image
++							673 text POST 09. Contrasena incorrecta cuenta existente 1  |  0
++						674 container
++							675 image
++							676 text GET 10. Borradores bloqueados para Gerente 1  |  0
++						677 container
++							678 image
++							679 text GET 11. Borradores bloqueados para Director 1  |  0
++						680 container
++							681 image
++							682 text GET 12. Borradores bloqueados para Compras 1  |  0
++						683 container
++							684 image
++							685 text GET 13. Administracion bloqueada a Solicitante 1  |  0
++						686 container
++							687 image
++							688 text GET 14. Bandeja Gerente 1  |  0
++						689 container
++							690 image
++							691 text GET 15. Bandeja Director 1  |  0
++						692 container
++							693 image
++							694 text GET 16. Catalogo resumen Solicitante 1  |  0
++						695 container
++							696 image
++							697 text POST 17. Crear proveedor exclusivo QA 1  |  0
++						698 container
++							699 image
++							700 text POST 18. Crear borrador QA incompleto 1  |  0
++						701 container
++							702 image
++							703 text GET 19. Recuperar borrador propio 1  |  0
++						704 container
++							705 image
++							706 text GET 20. Lectura borrador ajeno por Gerente 1  |  0
++						707 container
++							708 image
++							709 text GET 21. Lectura borrador ajeno por Director 1  |  0
++						710 container
++							711 image
++							712 text GET 22. Lectura borrador ajeno por Compras 1  |  0
++						713 container
++							714 image
++							715 text PATCH 23. PATCH version vigente 1  |  0
++						716 container
++							717 image
++							718 text PATCH 24. PATCH version anterior conflicto 1  |  0
++						719 container
++							720 image
++							721 text PATCH 25. Segundo PATCH version incrementada 2  |  0
++						722 container
++							723 image
++							724 text GET 26. Persistencia despues de PATCH 1  |  0
++						725 container
++							726 image
++							727 text PATCH 27. Completar borrador con precios numericos 1  |  0
++						728 container
++							729 image
++							730 text GET 28. Recuperar precios del borrador 2  |  0
++						731 container
++							732 image
++							733 text POST 29. Enviar borrador QA 1  |  0
++						734 container
++							735 image
++							736 text GET 30. Consultar borrador tras envio 1  |  0
++						737 container
++							738 image
++							739 text PATCH 31. Bloqueo PATCH despues del envio 1  |  0
++						740 container
++							741 image
++							742 text POST 32. Reintento envio conserva requestId 2  |  0
++						743 container
++							744 image
++							745 text GET 33. Seguimiento persistencia 1 2  |  0
++						746 container
++							747 image
++							748 text GET 34. Consultar solicitud QA propia 1  |  0
++						749 container
++							750 image
++							751 text GET 35. Director sin alcance al monto 25 1  |  0
++						752 container
++							753 image
++							754 text POST 36. Anular solicitud QA propia 1  |  0
+The focused UI element is 80 container Create new request Search tabs Environment No Environment Select Environment Breadcrumb navigation Run actions Ran today at 12:43:17 AM View all runs Source Runner Environment none Iterations 1 Duration 57s 314ms All tests 44 Errors 0
