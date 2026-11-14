@@ -1,5 +1,11 @@
 # Testing y API Integration - Diego
 
+## Pruebas AWS actuales
+
+Para el despliegue AWS del 14 de noviembre, importar `postman/aura-aws-publicas.postman_collection.json`. Contiene siete peticiones sin credenciales validas y sus aserciones para repetir la verificacion; usar un agente capaz de enviar cabeceras Origin, como Cloud Agent o Desktop Agent. No cambiar los rechazos 401/403 esperados por credenciales validas ni aceptar sugerencias automaticas de corregirlos.
+
+Ver [resultados y limites](evidence/2026-11-14-aws/README.md). La ejecucion documentada fue individual y visual, no Collection Runner. Las instrucciones que siguen son historicas de la integracion local y no describen todo el backend AWS actual.
+
 Esta rama incorpora pruebas compatibles con el backend actual de `AndrWes44/compras-g7`. Se actualizo desde develop por fast-forward y se agregaron solo archivos de testing, Postman y documentacion. No se reemplazo el backend del companero.
 
 ## Ejecutar pruebas automatizadas
