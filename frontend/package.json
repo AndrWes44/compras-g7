@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "test": "node tests/test_frontend_suite.js && node tests/test_fase4_fase5.js && node tests/test_fase6.js && node tests/test_fase7.js && node tests/test_fase8.js && node tests/test_fase9.js && node tests/test_normalizador.js"
+    "test": "node tests/test_frontend_suite.js && node tests/test_fase4_fase5.js && node tests/test_fase6.js && node tests/test_fase7.js && node tests/test_fase8.js && node tests/test_fase9.js && node tests/test_normalizador.js && node tests/test_fase10_admin_nuevasolicitud.js"
   },
   "dependencies": {
     "express": "^4.21.2"

@@ -54,6 +54,8 @@ const state = window.state = {
   // Filtros administrativos y verificación
   adminFiltroEstado: '',
   pendingEmail: '',
+  adminDecisionModal: null, // { open: boolean, decision: 'APPROVED' | 'REJECTED', sub, version, email, name, role, comments, error }
+  formErrors: {},
 
   // Metadatos de roles dinámicos (sin credenciales simuladas ni contraseñas)
   users: {
@@ -404,11 +406,11 @@ function renderAdminUsuarios() {
                     <td class="py-3.5 px-4 font-mono text-slate-500">v${u.version || 1}</td>
                     <td class="py-3.5 px-4 text-center">
                       <div class="flex items-center justify-center gap-2">
-                        <button onclick="abrirModalAprobarUsuario('${sub}', ${u.version || 1})" class="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[11px] shadow">
+                        <button onclick="abrirModalAprobarUsuario('${sub}', ${u.version || 1}, '${encodeURIComponent(u.email || '')}', '${encodeURIComponent(u.name || '')}')" class="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[11px] shadow">
                           Aprobar / Asignar Rol
                         </button>
                         ${status !== 'REJECTED' ? `
-                          <button onclick="rechazarUsuarioAdmin('${sub}', ${u.version || 1})" class="px-2.5 py-1 rounded bg-red-600/80 hover:bg-red-600 text-white font-semibold text-[11px]">
+                          <button onclick="rechazarUsuarioAdmin('${sub}', ${u.version || 1}, '${encodeURIComponent(u.email || '')}', '${encodeURIComponent(u.name || '')}')" class="px-2.5 py-1 rounded bg-red-600/80 hover:bg-red-600 text-white font-semibold text-[11px]">
                             Rechazar
                           </button>
                         ` : ''}
@@ -461,9 +463,9 @@ function renderSidebar() {
 
   let navItems = [];
   if (isAdmin) {
+    // Administrador: exclusivamente gestión de cuentas y altas (sin acceso comercial)
     navItems = [
-      { id: 'admin_usuarios', label: 'Gestión de Cuentas', icon: 'fa-users-gear', allowed: true },
-      { id: 'solicitudes', label: 'Solicitudes', icon: 'fa-table-columns', allowed: true }
+      { id: 'admin_usuarios', label: 'Gestión de Cuentas', icon: 'fa-users-gear', allowed: true }
     ];
   } else if (isSolicitante) {
     navItems = [
@@ -559,6 +561,7 @@ function renderSidebar() {
 function renderTopNav() {
   const isSolicitante = state.currentRole === 'solicitante';
   const isCompras = state.currentRole === 'compras';
+  const isAdmin = Boolean(state.currentUser && state.currentUser.isAdmin);
 
   const titles = {
     dashboard: isSolicitante ? 'Dashboard — Solicitante' : (state.currentRole === 'director' ? 'Dashboard — Dirección General' : (state.currentRole === 'gerente' ? 'Dashboard — Gerencia' : 'Dashboard — Compras & Adquisiciones')),
@@ -590,7 +593,7 @@ function renderTopNav() {
       </div>
 
       <div class="flex items-center gap-3">
-        <button onclick="recargarSolicitudesApi()" title="Sincronizar con API Express" class="p-2 text-slate-400 hover:text-white hover:bg-slate-800/60 rounded-lg text-xs border border-aura-border transition-colors ${state.apiState.isLoading ? 'animate-spin text-blue-400' : ''}">
+        <button onclick="${Boolean(state.currentUser && state.currentUser.isAdmin) ? 'recargarAdminUsuariosApi()' : 'recargarSolicitudesApi()'}" title="Sincronizar con AWS" class="p-2 text-slate-400 hover:text-white hover:bg-slate-800/60 rounded-lg text-xs border border-aura-border transition-colors ${state.apiState.isLoading ? 'animate-spin text-blue-400' : ''}">
           <i class="fa-solid fa-rotate"></i>
         </button>
 
@@ -611,6 +614,7 @@ function renderTopNav() {
     </header>
   `;
 }
+window.renderTopNav = renderTopNav;
 
 // ----------------- VISTAS PRINCIPALES -----------------
 function renderMainContent() {
@@ -916,22 +920,37 @@ function renderNuevaSolicitud() {
     <div class="max-w-4xl mx-auto bg-aura-card border border-aura-border rounded-2xl p-6 shadow-2xl">
       <div class="flex items-center justify-between mb-6 pb-4 border-b border-aura-border">
         <div>
-          <h3 class="text-base font-bold text-white">
-            ${isEditing ? 'Editar Borrador de Requerimiento' : 'Nueva Solicitud de Compra (SC)'}
-          </h3>
+          <div class="flex items-center gap-2 mb-1">
+            <h3 class="text-base font-bold text-white">
+              ${isEditing ? 'Editar Borrador de Requerimiento' : 'Nueva Solicitud de Compra (SC)'}
+            </h3>
+            ${isEditing 
+              ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1"><i class="fa-solid fa-cloud text-[9px]"></i>Borrador en DynamoDB (ID: ${state.editingDraftId})</span>`
+              : `<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-300 border border-slate-700">Formulario Nuevo (Sin Guardar)</span>`}
+          </div>
           <p class="text-xs text-slate-400">
             ${isEditing ? 'Modifica los artículos o detalles antes de remitir formalmente a aprobación.' : 'Ingresa los detalles del requerimiento y los ítems cotizados.'}
           </p>
         </div>
-        <button onclick="navigateTo('solicitudes')" class="px-3 py-1.5 rounded-lg border border-aura-border text-xs text-slate-300 hover:bg-slate-800 transition-colors">
-          ← Volver al Kanban
-        </button>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="confirmarLimpiarFormulario()" class="px-3 py-1.5 rounded-lg border border-red-500/30 text-xs text-red-300 hover:bg-red-500/10 hover:text-red-200 transition-colors flex items-center gap-1.5" title="Restablecer todos los campos del formulario">
+            <i class="fa-solid fa-broom text-[10px]"></i>
+            <span>Limpiar Formulario</span>
+          </button>
+          <button type="button" onclick="navigateTo('solicitudes')" class="px-3 py-1.5 rounded-lg border border-aura-border text-xs text-slate-300 hover:bg-slate-800 transition-colors">
+            ← Volver al Kanban
+          </button>
+        </div>
       </div>
 
       <form onsubmit="handleCrearSolicitud(event)" class="space-y-6">
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Descripción General del Requerimiento</label>
-          <input type="text" id="solicitud-desc" required value="${form.descripcion}" oninput="actualizarCampoForm('descripcion', this.value)" placeholder="Ej. Renovación anual de licencias y equipamiento para TI" class="w-full px-3.5 py-2.5 bg-aura-input border border-aura-border rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500">
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="block text-xs font-semibold text-slate-300">Descripción General del Requerimiento</label>
+            <span id="solicitud-desc-contador" class="text-[10px] text-slate-500 font-mono">${(form.descripcion || '').length} / 1000</span>
+          </div>
+          <input type="text" id="solicitud-desc" required maxlength="1000" value="${form.descripcion}" oninput="actualizarCampoForm('descripcion', this.value)" placeholder="Ej. Renovación anual de licencias y equipamiento para TI (hasta 1,000 caracteres)" class="w-full px-3.5 py-2.5 bg-aura-input border border-aura-border rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors">
+          <div id="error-solicitud-desc" class="hidden text-[11px] text-red-400 mt-1"></div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -982,17 +1001,17 @@ function renderNuevaSolicitud() {
               </thead>
               <tbody class="divide-y divide-aura-border text-slate-200">
                 ${form.items.map((item, idx) => `
-                  <tr>
+                  <tr id="item-row-${idx}">
                     <td class="p-2">
-                      <input type="text" value="${item.nombre}" onchange="actualizarItem(${idx}, 'nombre', this.value)" placeholder="Descripción del producto o servicio" class="w-full px-2 py-1.5 bg-aura-input border border-aura-border rounded text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+                      <input type="text" id="item-nombre-${idx}" value="${item.nombre}" oninput="actualizarItem(${idx}, 'nombre', this.value)" placeholder="Descripción del producto o servicio" class="w-full px-2 py-1.5 bg-aura-input border border-aura-border rounded text-xs text-slate-100 focus:outline-none focus:border-blue-500">
                     </td>
                     <td class="p-2">
-                      <input type="number" min="1" value="${item.cantidad}" onchange="actualizarItem(${idx}, 'cantidad', this.value)" class="w-full px-2 py-1.5 bg-aura-input border border-aura-border rounded text-xs text-center text-slate-100 focus:outline-none focus:border-blue-500">
+                      <input type="number" id="item-cantidad-${idx}" min="1" max="10000" step="1" value="${item.cantidad}" oninput="actualizarItem(${idx}, 'cantidad', this.value)" class="w-full px-2 py-1.5 bg-aura-input border border-aura-border rounded text-xs text-center text-slate-100 focus:outline-none focus:border-blue-500">
                     </td>
                     <td class="p-2">
-                      <input type="number" step="0.01" min="0" value="${item.precio}" onchange="actualizarItem(${idx}, 'precio', this.value)" class="w-full px-2 py-1.5 bg-aura-input border border-aura-border rounded text-xs text-right text-slate-100 focus:outline-none focus:border-blue-500">
+                      <input type="number" id="item-precio-${idx}" step="0.01" min="0" value="${item.precio}" oninput="actualizarItem(${idx}, 'precio', this.value)" class="w-full px-2 py-1.5 bg-aura-input border border-aura-border rounded text-xs text-right text-slate-100 focus:outline-none focus:border-blue-500">
                     </td>
-                    <td class="p-2 text-right font-mono font-semibold text-white">
+                    <td class="p-2 text-right font-mono font-semibold text-white" id="item-subtotal-${idx}">
                       $${(Number(item.cantidad || 0) * Number(item.precio || 0)).toFixed(2)}
                     </td>
                     <td class="p-2 text-center">
@@ -1010,25 +1029,25 @@ function renderNuevaSolicitud() {
         </div>
 
         <!-- Banner de Política de Dictamen Oficial (Gerente vs Director) -->
-        <div class="p-3.5 rounded-xl border flex items-center justify-between ${
+        <div id="banner-politica-dictamen" class="p-3.5 rounded-xl border flex items-center justify-between transition-colors ${
           esAltoMonto 
             ? 'bg-amber-500/10 border-amber-500/40 text-amber-300' 
             : 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300'
         }">
           <div class="flex items-center gap-2.5">
-            <i class="fa-solid ${esAltoMonto ? 'fa-triangle-exclamation text-amber-400' : 'fa-circle-check text-emerald-400'} text-base"></i>
+            <i class="fa-solid ${esAltoMonto ? 'fa-triangle-exclamation text-amber-400' : 'fa-circle-check text-emerald-400'} text-base" id="banner-icono"></i>
             <div>
-              <span class="text-xs font-bold block">
+              <span class="text-xs font-bold block" id="banner-titulo">
                 ${esAltoMonto ? 'Solicitud de Alto Monto (> $1,000 USD)' : 'Aprobación ordinaria de Gerencia (Hasta $1,000 USD)'}
               </span>
-              <span class="text-[11px] opacity-80">
+              <span class="text-[11px] opacity-80" id="banner-subtitulo">
                 ${esAltoMonto ? 'Monto superior a $1,000: requiere dictamen exclusivo de Dirección General.' : 'Monto de hasta $1,000: aprobación directa de Gerencia.'}
               </span>
             </div>
           </div>
           <div class="text-right">
             <span class="text-[10px] uppercase font-semibold opacity-70 block">Total Estimado</span>
-            <span class="text-base font-bold font-mono">$${totalCalculado.toFixed(2)}</span>
+            <span class="text-base font-bold font-mono" id="total-estimado-valor">$${totalCalculado.toFixed(2)}</span>
           </div>
         </div>
 
@@ -1650,6 +1669,61 @@ function renderBadgeProveedor(estado) {
 }
 
 function renderModal() {
+  if (state.adminDecisionModal && state.adminDecisionModal.open) {
+    const m = state.adminDecisionModal;
+    const isApprove = m.decision === 'APPROVED';
+    return `
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div class="w-full max-w-md bg-aura-card border border-aura-border rounded-2xl p-6 shadow-2xl space-y-4">
+          <div class="flex items-center gap-3 ${isApprove ? 'text-emerald-400' : 'text-red-400'}">
+            <div class="w-10 h-10 rounded-full ${isApprove ? 'bg-emerald-500/20' : 'bg-red-500/20'} flex items-center justify-center text-lg shrink-0">
+              <i class="fa-solid ${isApprove ? 'fa-user-check' : 'fa-user-xmark'}"></i>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-white">
+                ${isApprove ? 'Aprobar Cuenta y Asignar Rol' : 'Rechazar Acceso de Usuario'}
+              </h3>
+              <p class="text-[11px] text-slate-400">${m.name ? `${m.name} (${m.email})` : m.email}</p>
+            </div>
+          </div>
+
+          <form onsubmit="handleConfirmarAdminDecision(event)" class="space-y-4 pt-2">
+            ${isApprove ? `
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1.5">Rol Comercial a Asignar</label>
+                <select id="admin-modal-role" class="w-full px-3.5 py-2.5 bg-aura-input border border-aura-border rounded-lg text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+                  <option value="Solicitante" ${m.role === 'Solicitante' ? 'selected' : ''}>Solicitante Departamental</option>
+                  <option value="Gerente" ${m.role === 'Gerente' ? 'selected' : ''}>Gerente Aprobador (hasta $1,000 USD)</option>
+                  <option value="Director" ${m.role === 'Director' ? 'selected' : ''}>Director General (> $1,000 USD)</option>
+                  <option value="Compras" ${m.role === 'Compras' ? 'selected' : ''}>Compras & Adquisiciones</option>
+                </select>
+              </div>
+            ` : ''}
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1.5">
+                Comentario de Auditoría Obligatorio <span class="text-red-400">*</span>
+              </label>
+              <textarea id="admin-modal-comments" rows="3" required placeholder="${isApprove ? 'Ej. Alta de usuario autorizada conforme a contratación en área de TI.' : 'Ej. No se autoriza acceso por no pertenecer al personal activo.'}" class="w-full px-3.5 py-2 bg-aura-input border border-aura-border rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"></textarea>
+              <div id="admin-modal-error" class="text-[11px] text-red-400 mt-1 ${m.error ? '' : 'hidden'}">${m.error || ''}</div>
+            </div>
+
+            <div class="pt-3 border-t border-aura-border flex items-center justify-end gap-2">
+              <button type="button" onclick="cerrarModalAdminDecision()" class="px-3.5 py-2 rounded-lg border border-aura-border text-xs text-slate-300 hover:bg-slate-800 transition-colors">
+                Cancelar
+              </button>
+              <button type="submit" class="px-4 py-2 rounded-lg text-xs font-semibold text-white shadow-lg transition-all ${
+                isApprove ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30' : 'bg-red-600 hover:bg-red-500 shadow-red-600/30'
+              }">
+                ${isApprove ? 'Confirmar Aprobación' : 'Confirmar Rechazo'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+  }
+
   if (state.globalErrorModal) {
     const { title, message, code, actionText, onAction } = state.globalErrorModal;
     return `
@@ -1812,17 +1886,21 @@ window.handleLoginFormSubmit = async function(e) {
     render();
 
     // Sincronización de datos remotos según el rol
-    if (typeof window.recargarSolicitudesApi === 'function') {
-      window.recargarSolicitudesApi();
-    }
-    if (typeof window.recargarProveedoresApi === 'function') {
-      window.recargarProveedoresApi();
-    }
-    if (typeof window.recargarBorradoresApi === 'function' && authUser.role === 'solicitante') {
-      window.recargarBorradoresApi();
-    }
-    if (typeof window.recargarAdminUsuariosApi === 'function' && authUser.isAdmin) {
-      window.recargarAdminUsuariosApi();
+    if (authUser.isAdmin) {
+      // El Administrador de Cuentas únicamente sincroniza la gestión de usuarios
+      if (typeof window.recargarAdminUsuariosApi === 'function') {
+        window.recargarAdminUsuariosApi();
+      }
+    } else {
+      if (typeof window.recargarSolicitudesApi === 'function') {
+        window.recargarSolicitudesApi();
+      }
+      if (typeof window.recargarProveedoresApi === 'function') {
+        window.recargarProveedoresApi();
+      }
+      if (typeof window.recargarBorradoresApi === 'function' && authUser.role === 'solicitante') {
+        window.recargarBorradoresApi();
+      }
     }
   } catch (err) {
     console.error('[AURA Auth Error]', err);
@@ -2121,7 +2199,20 @@ window.actualizarCampoForm = function(campo, valor) {
     const p = state.proveedores.find(x => x.id === valor);
     if (p) state.nuevaSolicitudForm.proveedor = p.nombre;
   }
-  render();
+
+  // Si es descripción, actualizar el estado y contador SIN reconstruir el input para no perder foco
+  if (campo === 'descripcion') {
+    const contador = document.getElementById('solicitud-desc-contador');
+    if (contador) contador.textContent = `${(valor || '').length} / 1000`;
+    const errDesc = document.getElementById('error-solicitud-desc');
+    if (errDesc && valor && valor.trim().length <= 1000) {
+      errDesc.classList.add('hidden');
+      errDesc.textContent = '';
+      const inputEl = document.getElementById('solicitud-desc');
+      if (inputEl) inputEl.classList.remove('border-red-500');
+    }
+    return;
+  }
 };
 
 window.agregarFilaItem = function() {
@@ -2129,6 +2220,7 @@ window.agregarFilaItem = function() {
     nombre: '',
     cantidad: 1,
     precio: 0,
+    precioUnitario: 0,
     subtotal: 0
   });
   render();
@@ -2144,31 +2236,166 @@ window.eliminarFilaItem = function(idx) {
 window.actualizarItem = function(idx, campo, valor) {
   const it = state.nuevaSolicitudForm.items[idx];
   if (!it) return;
+
   if (campo === 'cantidad' || campo === 'precio') {
     it[campo] = Number(valor);
-    it.subtotal = it.cantidad * it.precio;
+    it.subtotal = (Number(it.cantidad || 0) * Number(it.precio || 0));
+    it.precioUnitario = Number(it.precio || 0);
+
+    const subtotalEl = document.getElementById(`item-subtotal-${idx}`);
+    if (subtotalEl) {
+      subtotalEl.textContent = `$${it.subtotal.toFixed(2)}`;
+    }
+    window.actualizarBannerTotal();
   } else {
     it[campo] = valor;
   }
+};
+
+window.actualizarBannerTotal = function() {
+  const form = state.nuevaSolicitudForm;
+  const totalCalculado = form.items.reduce((acc, it) => acc + (Number(it.cantidad || 0) * Number(it.precio || 0)), 0);
+  const esAltoMonto = totalCalculado > 1000;
+
+  const totalEl = document.getElementById('total-estimado-valor');
+  if (totalEl) totalEl.textContent = `$${totalCalculado.toFixed(2)}`;
+
+  const bannerEl = document.getElementById('banner-politica-dictamen');
+  const tituloEl = document.getElementById('banner-titulo');
+  const subtituloEl = document.getElementById('banner-subtitulo');
+  const iconoEl = document.getElementById('banner-icono');
+
+  if (bannerEl && tituloEl && subtituloEl && iconoEl) {
+    if (esAltoMonto) {
+      bannerEl.className = 'p-3.5 rounded-xl border flex items-center justify-between transition-colors bg-amber-500/10 border-amber-500/40 text-amber-300';
+      iconoEl.className = 'fa-solid fa-triangle-exclamation text-amber-400 text-base';
+      tituloEl.textContent = 'Solicitud de Alto Monto (> $1,000 USD)';
+      subtituloEl.textContent = 'Monto superior a $1,000: requiere dictamen exclusivo de Dirección General.';
+    } else {
+      bannerEl.className = 'p-3.5 rounded-xl border flex items-center justify-between transition-colors bg-emerald-500/10 border-emerald-500/40 text-emerald-300';
+      iconoEl.className = 'fa-solid fa-circle-check text-emerald-400 text-base';
+      tituloEl.textContent = 'Aprobación ordinaria de Gerencia (Hasta $1,000 USD)';
+      subtituloEl.textContent = 'Monto de hasta $1,000: aprobación directa de Gerencia.';
+    }
+  }
+};
+
+window.confirmarLimpiarFormulario = function() {
+  const confirmar = typeof confirm === 'function' ? confirm('¿Deseas restablecer el formulario? Se perderán los cambios no guardados.') : true;
+  if (!confirmar) return;
+
+  state.editingDraftId = null;
+  state.nuevaSolicitudForm = {
+    descripcion: '',
+    departamento: 'DEP-TI',
+    proveedor: '',
+    proveedorId: '',
+    items: [{ nombre: '', cantidad: 1, precio: 0, subtotal: 0 }]
+  };
   render();
+  showToast('Formulario restablecido.', 'info');
+};
+
+window.validarFormularioSolicitud = function(esEnvioFinal = false) {
+  const errores = [];
+  const descInput = (typeof document !== 'undefined' && typeof document.getElementById === 'function') ? document.getElementById('solicitud-desc') : null;
+  const desc = (descInput?.value || state.nuevaSolicitudForm.descripcion || '').trim();
+
+  // Limpiar errores visuales inline previos si el DOM está disponible
+  if (typeof document !== 'undefined' && typeof document.querySelectorAll === 'function') {
+    document.querySelectorAll('.form-inline-error').forEach(el => el.remove());
+    document.querySelectorAll('.border-red-500').forEach(el => el.classList && el.classList.remove('border-red-500'));
+  }
+  const errDescGlobal = (typeof document !== 'undefined' && typeof document.getElementById === 'function') ? document.getElementById('error-solicitud-desc') : null;
+  if (errDescGlobal && errDescGlobal.classList) {
+    errDescGlobal.classList.add('hidden');
+    errDescGlobal.textContent = '';
+  }
+
+  // 1. Validar descripción
+  if (!desc) {
+    errores.push({ campo: 'descripcion', mensaje: 'La descripción general es obligatoria.' });
+    if (descInput && descInput.classList) descInput.classList.add('border-red-500');
+    if (errDescGlobal) {
+      errDescGlobal.textContent = 'La descripción general es obligatoria.';
+      if (errDescGlobal.classList) errDescGlobal.classList.remove('hidden');
+    }
+  } else if (desc.length > 1000) {
+    errores.push({ campo: 'descripcion', mensaje: 'La descripción no debe exceder los 1,000 caracteres.' });
+    if (descInput && descInput.classList) descInput.classList.add('border-red-500');
+    if (errDescGlobal) {
+      errDescGlobal.textContent = 'La descripción no debe exceder los 1,000 caracteres.';
+      if (errDescGlobal.classList) errDescGlobal.classList.remove('hidden');
+    }
+  }
+
+  // 2. Validar artículos
+  const items = state.nuevaSolicitudForm.items;
+  if (!items || items.length === 0) {
+    errores.push({ campo: 'items', mensaje: 'Debes cotizar al menos un artículo.' });
+  }
+
+  (items || []).forEach((it, idx) => {
+    const rowEl = (typeof document !== 'undefined' && typeof document.getElementById === 'function') ? document.getElementById(`item-row-${idx}`) : null;
+    const nombreInput = (typeof document !== 'undefined' && typeof document.getElementById === 'function') ? document.getElementById(`item-nombre-${idx}`) : null;
+    const cantidadInput = (typeof document !== 'undefined' && typeof document.getElementById === 'function') ? document.getElementById(`item-cantidad-${idx}`) : null;
+    const precioInput = (typeof document !== 'undefined' && typeof document.getElementById === 'function') ? document.getElementById(`item-precio-${idx}`) : null;
+
+    const nombre = ((nombreInput && nombreInput.value !== undefined && nombreInput.value !== '') ? nombreInput.value : (it.nombre || '')).trim();
+    const cantVal = (cantidadInput && cantidadInput.value !== undefined && cantidadInput.value !== '') ? cantidadInput.value : (it.cantidad !== undefined ? it.cantidad : 1);
+    const cantidad = Number(cantVal);
+    const precVal = (precioInput && precioInput.value !== undefined && precioInput.value !== '') ? precioInput.value : (it.precio !== undefined ? it.precio : (it.precioUnitario !== undefined ? it.precioUnitario : 0));
+    const precio = Number(precVal);
+
+    const filaErrores = [];
+
+    if (!nombre) {
+      filaErrores.push('Nombre requerido');
+      if (nombreInput && nombreInput.classList) nombreInput.classList.add('border-red-500');
+    }
+
+    if (isNaN(cantidad) || cantidad <= 0) {
+      filaErrores.push('Cantidad debe ser > 0');
+      if (cantidadInput && cantidadInput.classList) cantidadInput.classList.add('border-red-500');
+    } else if (cantidad > 10000) {
+      filaErrores.push('Máximo 10,000 unidades');
+      if (cantidadInput && cantidadInput.classList) cantidadInput.classList.add('border-red-500');
+    } else if (esEnvioFinal && !Number.isInteger(cantidad)) {
+      filaErrores.push('Para enviar, cantidad debe ser entero ≥ 1');
+      if (cantidadInput && cantidadInput.classList) cantidadInput.classList.add('border-red-500');
+    }
+
+    if (isNaN(precio) || precio <= 0) {
+      filaErrores.push('Precio debe ser > $0');
+      if (precioInput && precioInput.classList) precioInput.classList.add('border-red-500');
+    }
+
+    if (filaErrores.length > 0) {
+      errores.push({ campo: `item-${idx}`, mensaje: `Artículo #${idx + 1}: ${filaErrores.join(', ')}.` });
+      if (rowEl && typeof document.createElement === 'function' && typeof rowEl.after === 'function') {
+        const errorRow = document.createElement('tr');
+        errorRow.className = 'form-inline-error bg-red-500/10 text-red-400 text-[11px]';
+        errorRow.innerHTML = `<td colspan="5" class="py-1 px-3"><i class="fa-solid fa-circle-exclamation mr-1"></i>Fila #${idx + 1}: ${filaErrores.join(', ')}.</td>`;
+        rowEl.after(errorRow);
+      }
+    }
+  });
+
+  return errores;
 };
 
 // ----------------- GESTIÓN DE BORRADORES (DYNAMODB) -----------------
 window.guardarBorrador = async function() {
-  const desc = (document.getElementById('solicitud-desc')?.value || state.nuevaSolicitudForm.descripcion || '').trim();
-  if (!desc) {
-    showToast('Por favor ingresa una descripción para el borrador.', 'warning');
+  const errores = window.validarFormularioSolicitud ? window.validarFormularioSolicitud(false) : [];
+  if (errores.length > 0) {
+    showToast('Corrige los campos señalados en el formulario antes de guardar.', 'warning');
     return;
   }
 
+  const desc = (document.getElementById('solicitud-desc')?.value || state.nuevaSolicitudForm.descripcion || '').trim();
   const dep = document.getElementById('solicitud-dep')?.value || state.nuevaSolicitudForm.departamento || 'DEP-TI';
   const provId = document.getElementById('solicitud-prov')?.value || state.nuevaSolicitudForm.proveedorId || '';
   const total = state.nuevaSolicitudForm.items.reduce((acc, it) => acc + (Number(it.cantidad || 0) * Number(it.precio || 0)), 0);
-
-  if (total <= 0) {
-    showToast('El monto total del borrador debe ser mayor que cero.', 'warning');
-    return;
-  }
 
   const payloadBorrador = {
     description: desc,
@@ -2353,19 +2580,17 @@ window.verificarPersistenciaRegistro = async function(requestId, maxAttempts = 8
 // ----------------- CREACIÓN DIRECTA DE SOLICITUD -----------------
 window.handleCrearSolicitud = async function(e) {
   e.preventDefault();
-  const desc = document.getElementById('solicitud-desc').value.trim();
-  const dep = document.getElementById('solicitud-dep')?.value || 'DEP-TI';
-  const provId = document.getElementById('solicitud-prov')?.value || '';
+  const errores = window.validarFormularioSolicitud ? window.validarFormularioSolicitud(true) : [];
+  if (errores.length > 0) {
+    showToast('Corrige los campos señalados en el formulario antes de enviar.', 'warning');
+    return;
+  }
+
+  const desc = (document.getElementById('solicitud-desc')?.value || state.nuevaSolicitudForm.descripcion || '').trim();
+  const dep = document.getElementById('solicitud-dep')?.value || state.nuevaSolicitudForm.departamento || 'DEP-TI';
+  const provId = document.getElementById('solicitud-prov')?.value || state.nuevaSolicitudForm.proveedorId || '';
   const total = state.nuevaSolicitudForm.items.reduce((acc, it) => acc + (Number(it.cantidad || 0) * Number(it.precio || 0)), 0);
 
-  if (!desc) {
-    showToast('Por favor ingresa una descripción para el requerimiento.', 'warning');
-    return;
-  }
-  if (total <= 0) {
-    showToast('El monto total debe ser mayor que cero.', 'warning');
-    return;
-  }
   if (!provId) {
     showToast('Por favor selecciona un proveedor del catálogo oficial.', 'warning');
     return;
@@ -2702,14 +2927,38 @@ window.handleReenviarCodigo = async function(email) {
 
 window.recargarAdminUsuariosApi = async function() {
   if (!window.apiService) return;
+  state.apiState.isLoading = true;
+  render();
   try {
-    const estado = state.adminFiltroEstado || '';
-    const res = await window.apiService.getAdminUsuarios(estado);
-    state.adminUsuarios = (res && res.usuarios) ? res.usuarios : (Array.isArray(res) ? res : []);
-    render();
+    const estadoFiltro = state.adminFiltroEstado || '';
+    let records = [];
+
+    // Si el filtro es "Todos" (vacío), consultar en paralelo PENDING_APPROVAL, APPROVED y REJECTED
+    // porque el backend por omisión solo consulta PENDING_APPROVAL
+    if (!estadoFiltro || estadoFiltro === 'TODOS' || estadoFiltro === 'Todos') {
+      const [resPending, resApproved, resRejected] = await Promise.allSettled([
+        window.apiService.getAdminUsuarios('PENDING_APPROVAL'),
+        window.apiService.getAdminUsuarios('APPROVED'),
+        window.apiService.getAdminUsuarios('REJECTED')
+      ]);
+      const getList = r => (r.status === 'fulfilled' && r.value) 
+        ? (r.value.solicitudes || r.value.usuarios || (Array.isArray(r.value) ? r.value : [])) 
+        : [];
+      records = [...getList(resPending), ...getList(resApproved), ...getList(resRejected)];
+    } else {
+      const res = await window.apiService.getAdminUsuarios(estadoFiltro);
+      records = (res && (res.solicitudes || res.usuarios || (Array.isArray(res) ? res : []))) || [];
+    }
+
+    state.adminUsuarios = records;
+    state.apiState.isConnected = true;
   } catch (err) {
     console.warn('[AURA Admin Usuarios Error]', err.message);
+    state.apiState.isConnected = false;
     showToast('Error al cargar usuarios administrativos: ' + err.message, 'warning');
+  } finally {
+    state.apiState.isLoading = false;
+    render();
   }
 };
 
@@ -2718,29 +2967,89 @@ window.setAdminFiltroEstado = function(estado) {
   window.recargarAdminUsuariosApi();
 };
 
-window.abrirModalAprobarUsuario = function(sub, version) {
-  const rol = typeof prompt === 'function' ? prompt('Asignar rol comercial (Solicitante, Gerente, Director, Compras):', 'Solicitante') : 'Solicitante';
-  if (!rol) return;
-  const comentarios = typeof prompt === 'function' ? prompt('Comentario o motivo de auditoría administrativa:', 'Alta aprobada por administrador') : 'Alta aprobada por administrador';
-  if (!comentarios) return;
-
-  window.ejecutarDecidirUsuarioAdmin(sub, {
+window.abrirModalAprobarUsuario = function(sub, version, emailEncoded = '', nameEncoded = '') {
+  const email = emailEncoded ? decodeURIComponent(emailEncoded) : '';
+  const name = nameEncoded ? decodeURIComponent(nameEncoded) : '';
+  state.adminDecisionModal = {
+    open: true,
     decision: 'APPROVED',
-    role: rol.trim(),
+    sub,
     version: version || 1,
-    comments: comentarios.trim()
-  });
+    email,
+    name,
+    role: 'Solicitante',
+    comments: '',
+    error: ''
+  };
+  render();
 };
 
-window.rechazarUsuarioAdmin = function(sub, version) {
-  const comentarios = typeof prompt === 'function' ? prompt('Motivo obligatorio de rechazo de acceso:', 'Acceso no autorizado') : 'Acceso no autorizado';
-  if (!comentarios) return;
-
-  window.ejecutarDecidirUsuarioAdmin(sub, {
+window.rechazarUsuarioAdmin = function(sub, version, emailEncoded = '', nameEncoded = '') {
+  const email = emailEncoded ? decodeURIComponent(emailEncoded) : '';
+  const name = nameEncoded ? decodeURIComponent(nameEncoded) : '';
+  state.adminDecisionModal = {
+    open: true,
     decision: 'REJECTED',
+    sub,
     version: version || 1,
-    comments: comentarios.trim()
-  });
+    email,
+    name,
+    role: '',
+    comments: '',
+    error: ''
+  };
+  render();
+};
+
+window.cerrarModalAdminDecision = function() {
+  state.adminDecisionModal = null;
+  render();
+};
+
+window.handleConfirmarAdminDecision = async function(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  const m = state.adminDecisionModal;
+  if (!m) return;
+
+  const roleSelect = (typeof document !== 'undefined' && typeof document.getElementById === 'function') ? document.getElementById('admin-modal-role') : null;
+  const commentsInput = (typeof document !== 'undefined' && typeof document.getElementById === 'function') ? document.getElementById('admin-modal-comments') : null;
+  const role = (roleSelect && roleSelect.value) ? roleSelect.value : (m.role || 'Solicitante');
+  const comments = (commentsInput && commentsInput.value !== '' && commentsInput.value !== undefined) ? commentsInput.value.trim() : (m.comments || '').trim();
+
+  if (!comments) {
+    m.error = 'El comentario de auditoría es obligatorio.';
+    const errEl = (typeof document !== 'undefined' && typeof document.getElementById === 'function') ? document.getElementById('admin-modal-error') : null;
+    if (errEl) {
+      errEl.textContent = m.error;
+      errEl.classList.remove('hidden');
+    }
+    return;
+  }
+
+  const payload = {
+    decision: m.decision,
+    version: m.version || 1,
+    comments
+  };
+  if (m.decision === 'APPROVED') {
+    payload.role = role;
+  }
+
+  try {
+    await window.apiService.decidirAdminUsuario(m.sub, payload);
+    showToast(`Operación administrativa (${m.decision}) ejecutada con éxito.`, 'info');
+    state.adminDecisionModal = null;
+    await window.recargarAdminUsuariosApi();
+  } catch (err) {
+    console.error('[AURA Decidir Usuario Error]', err);
+    m.error = err.message || 'Error al ejecutar dictamen administrativo';
+    const errEl = document.getElementById('admin-modal-error');
+    if (errEl) {
+      errEl.textContent = m.error;
+      errEl.classList.remove('hidden');
+    }
+    showToast('Error administrativo: ' + err.message, 'warning');
+  }
 };
 
 window.ejecutarDecidirUsuarioAdmin = async function(sub, payload) {
@@ -2879,12 +3188,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       render();
 
       if (window.apiService) {
-        await Promise.allSettled([
-          window.recargarSolicitudesApi(),
-          window.recargarProveedoresApi(),
-          me.role === 'solicitante' ? window.recargarBorradoresApi() : Promise.resolve(),
-          me.isAdmin ? window.recargarAdminUsuariosApi() : Promise.resolve()
-        ]);
+        if (me.isAdmin) {
+          // El Administrador de Cuentas únicamente consulta la administración de usuarios (evita 403 comercial)
+          await window.recargarAdminUsuariosApi();
+        } else {
+          await Promise.allSettled([
+            window.recargarSolicitudesApi(),
+            window.recargarProveedoresApi(),
+            me.role === 'solicitante' ? window.recargarBorradoresApi() : Promise.resolve()
+          ]);
+        }
       }
     } catch (err) {
       console.warn('[AURA] Sesión inválida o expirada:', err.message);
