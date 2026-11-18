@@ -337,8 +337,19 @@
     // ==========================================
     // 5. ADMINISTRACIÓN DE CUENTAS (ADMIN_GROUP)
     // ==========================================
-    async getAdminUsuarios(estado = '') {
-      const query = estado ? `?estado=${encodeURIComponent(estado)}` : '';
+    async getAdminUsuarios(estado = '', cursor = null, limit = 50) {
+      const params = new URLSearchParams();
+      if (estado) {
+        params.append('estado', estado);
+        params.append('status', estado);
+      }
+      if (cursor) {
+        params.append('cursor', cursor);
+      }
+      if (limit) {
+        params.append('limit', String(limit));
+      }
+      const query = params.toString() ? `?${params.toString()}` : '';
       const res = await this.request(`/api/admin/usuarios${query}`, { method: 'GET' });
       return res.data;
     }

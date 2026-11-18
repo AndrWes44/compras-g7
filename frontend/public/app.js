@@ -349,7 +349,7 @@ function renderAdminUsuarios() {
       <div class="flex items-center justify-between">
         <div>
           <h3 class="text-base font-bold text-white">Panel de Control: Aprobación y Roles de Usuarios</h3>
-          <p class="text-xs text-slate-400">Supervisión administrativa de cuentas registradas en Amazon Cognito</p>
+          <p class="text-xs text-slate-400">Altas y solicitudes de registro del flujo oficial de incorporación (DynamoDB Business). No incluye cuentas técnicas preexistentes de Cognito.</p>
         </div>
         <div class="flex items-center gap-2">
           <button onclick="setAdminFiltroEstado('')" class="px-3 py-1.5 rounded-lg text-xs font-medium ${state.adminFiltroEstado === '' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'}">Todos</button>
@@ -1821,7 +1821,7 @@ window.mostrarErrorModal = function({ title, message, code, actionText, onAction
 };
 
 // ----------------- NAVEGACIÓN Y GUARDIA DE SESIÓN -----------------
-window.navigateTo = function(view) {
+function navigateTo(view) {
   const publicViews = ['login', 'registro', 'confirmar_codigo', 'espera_aprobacion', 'recuperar_password', 'tokens'];
   const isAuthenticated = window.authService && window.authService.isAuthenticated() && state.currentUser;
 
@@ -1852,7 +1852,8 @@ window.navigateTo = function(view) {
 
   state.currentView = view;
   render();
-};
+}
+window.navigateTo = navigateTo;
 
 // ----------------- AUTENTICACIÓN REAL Y LOGOUT -----------------
 window.handleLoginFormSubmit = async function(e) {
@@ -2089,6 +2090,38 @@ window.verDetalleSolicitud = async function(id) {
   render();
 
   if (window.apiService && id) {
+    const sLocal = state.solicitudes.find(x => x.id === id);
+    const esBorrador = (sLocal && sLocal.estado === 'borrador') ||
+                       (state.borradoresRemotos && state.borradoresRemotos.some(b => (b.id || b.draftId) === id)) ||
+                       id.startsWith('DRAFT-') || id.startsWith('BR-');
+
+    // Apertura de borradores mediante /api/borradores/:id
+    if (esBorrador) {
+      try {
+        const detalle = await window.apiService.getBorradorById(id);
+        if (detalle) {
+          const rawItem = detalle.borrador || detalle.draft || detalle.data || detalle;
+          const normalizado = window.normalizarBorradorDesdeApi ? window.normalizarBorradorDesdeApi(rawItem) : window.normalizarSolicitudDesdeApi(rawItem);
+          const idx = state.solicitudes.findIndex(x => x.id === id);
+          if (idx !== -1) {
+            state.solicitudes[idx] = { ...state.solicitudes[idx], ...normalizado };
+          } else {
+            state.solicitudes.push(normalizado);
+          }
+          render();
+        }
+      } catch (err) {
+        if (err.status === 404) {
+          console.warn(`[AURA] Borrador ${id} no encontrado en DynamoDB (404).`);
+          state.selectedSolicitudId = '__NOT_FOUND__';
+          render();
+        } else {
+          console.warn(`[AURA] Error al consultar detalle de borrador ${id}:`, err.message);
+        }
+      }
+      return;
+    }
+
     try {
       const detalle = await window.apiService.getSolicitudById(id);
       if (detalle) {
@@ -2104,6 +2137,26 @@ window.verDetalleSolicitud = async function(id) {
       }
     } catch (err) {
       if (err.status === 404) {
+        // Fallback: Si el id corresponde a un borrador, intentar consultar /api/borradores/:id
+        if (id.startsWith('DRAFT-') || id.startsWith('BR-')) {
+          try {
+            const detalleBorrador = await window.apiService.getBorradorById(id);
+            if (detalleBorrador) {
+              const rawItem = detalleBorrador.borrador || detalleBorrador.draft || detalleBorrador.data || detalleBorrador;
+              const normalizado = window.normalizarBorradorDesdeApi ? window.normalizarBorradorDesdeApi(rawItem) : window.normalizarSolicitudDesdeApi(rawItem);
+              const idx = state.solicitudes.findIndex(x => x.id === id);
+              if (idx !== -1) {
+                state.solicitudes[idx] = { ...state.solicitudes[idx], ...normalizado };
+              } else {
+                state.solicitudes.push(normalizado);
+              }
+              render();
+              return;
+            }
+          } catch (draftErr) {
+            // No se encontró como borrador tampoco
+          }
+        }
         console.warn(`[AURA] Solicitud ${id} no encontrada en DynamoDB (404).`);
         state.selectedSolicitudId = '__NOT_FOUND__';
         render();
@@ -2313,29 +2366,50 @@ window.validarFormularioSolicitud = function(esEnvioFinal = false) {
   }
 
   // 1. Validar descripción
-  if (!desc) {
-    errores.push({ campo: 'descripcion', mensaje: 'La descripción general es obligatoria.' });
-    if (descInput && descInput.classList) descInput.classList.add('border-red-500');
-    if (errDescGlobal) {
-      errDescGlobal.textContent = 'La descripción general es obligatoria.';
-      if (errDescGlobal.classList) errDescGlobal.classList.remove('hidden');
+  if (esEnvioFinal) {
+    // Para envío a firma: la descripción es obligatoria (1-1000 caracteres)
+    if (!desc) {
+      errores.push({ campo: 'descripcion', mensaje: 'La descripción general es obligatoria para enviar la solicitud.' });
+      if (descInput && descInput.classList) descInput.classList.add('border-red-500');
+      if (errDescGlobal) {
+        errDescGlobal.textContent = 'La descripción general es obligatoria para enviar la solicitud.';
+        if (errDescGlobal.classList) errDescGlobal.classList.remove('hidden');
+      }
+    } else if (desc.length > 1000) {
+      errores.push({ campo: 'descripcion', mensaje: 'La descripción no debe exceder los 1,000 caracteres.' });
+      if (descInput && descInput.classList) descInput.classList.add('border-red-500');
+      if (errDescGlobal) {
+        errDescGlobal.textContent = 'La descripción no debe exceder los 1,000 caracteres.';
+        if (errDescGlobal.classList) errDescGlobal.classList.remove('hidden');
+      }
     }
-  } else if (desc.length > 1000) {
-    errores.push({ campo: 'descripcion', mensaje: 'La descripción no debe exceder los 1,000 caracteres.' });
-    if (descInput && descInput.classList) descInput.classList.add('border-red-500');
-    if (errDescGlobal) {
-      errDescGlobal.textContent = 'La descripción no debe exceder los 1,000 caracteres.';
-      if (errDescGlobal.classList) errDescGlobal.classList.remove('hidden');
+  } else {
+    // Para borrador: se permite incompleta (opcional o vacía), pero si se escribe texto no debe superar el límite de 1,000 caracteres
+    if (desc && desc.length > 1000) {
+      errores.push({ campo: 'descripcion', mensaje: 'La descripción no debe exceder los 1,000 caracteres.' });
+      if (descInput && descInput.classList) descInput.classList.add('border-red-500');
+      if (errDescGlobal) {
+        errDescGlobal.textContent = 'La descripción no debe exceder los 1,000 caracteres.';
+        if (errDescGlobal.classList) errDescGlobal.classList.remove('hidden');
+      }
     }
   }
 
-  // 2. Validar artículos
-  const items = state.nuevaSolicitudForm.items;
-  if (!items || items.length === 0) {
-    errores.push({ campo: 'items', mensaje: 'Debes cotizar al menos un artículo.' });
+  // 2. Validar proveedor (en envío final es obligatorio)
+  const provSelect = (typeof document !== 'undefined' && typeof document.getElementById === 'function') ? document.getElementById('solicitud-prov') : null;
+  const provId = (provSelect?.value || state.nuevaSolicitudForm.proveedorId || '').trim();
+  if (esEnvioFinal && !provId) {
+    errores.push({ campo: 'proveedorId', mensaje: 'Debes seleccionar un proveedor del catálogo oficial para enviar la solicitud.' });
+    if (provSelect && provSelect.classList) provSelect.classList.add('border-red-500');
   }
 
-  (items || []).forEach((it, idx) => {
+  // 3. Validar artículos
+  const items = state.nuevaSolicitudForm.items || [];
+  if (esEnvioFinal && items.length === 0) {
+    errores.push({ campo: 'items', mensaje: 'Debes cotizar al menos un artículo para enviar la solicitud.' });
+  }
+
+  items.forEach((it, idx) => {
     const rowEl = (typeof document !== 'undefined' && typeof document.getElementById === 'function') ? document.getElementById(`item-row-${idx}`) : null;
     const nombreInput = (typeof document !== 'undefined' && typeof document.getElementById === 'function') ? document.getElementById(`item-nombre-${idx}`) : null;
     const cantidadInput = (typeof document !== 'undefined' && typeof document.getElementById === 'function') ? document.getElementById(`item-cantidad-${idx}`) : null;
@@ -2349,25 +2423,44 @@ window.validarFormularioSolicitud = function(esEnvioFinal = false) {
 
     const filaErrores = [];
 
-    if (!nombre) {
-      filaErrores.push('Nombre requerido');
-      if (nombreInput && nombreInput.classList) nombreInput.classList.add('border-red-500');
-    }
+    if (esEnvioFinal) {
+      // Envío formal exige datos completos y consistentes:
+      if (!nombre) {
+        filaErrores.push('Nombre requerido');
+        if (nombreInput && nombreInput.classList) nombreInput.classList.add('border-red-500');
+      }
 
-    if (isNaN(cantidad) || cantidad <= 0) {
-      filaErrores.push('Cantidad debe ser > 0');
-      if (cantidadInput && cantidadInput.classList) cantidadInput.classList.add('border-red-500');
-    } else if (cantidad > 10000) {
-      filaErrores.push('Máximo 10,000 unidades');
-      if (cantidadInput && cantidadInput.classList) cantidadInput.classList.add('border-red-500');
-    } else if (esEnvioFinal && !Number.isInteger(cantidad)) {
-      filaErrores.push('Para enviar, cantidad debe ser entero ≥ 1');
-      if (cantidadInput && cantidadInput.classList) cantidadInput.classList.add('border-red-500');
-    }
+      if (isNaN(cantidad) || cantidad <= 0) {
+        filaErrores.push('Cantidad debe ser > 0');
+        if (cantidadInput && cantidadInput.classList) cantidadInput.classList.add('border-red-500');
+      } else if (cantidad > 10000) {
+        filaErrores.push('Máximo 10,000 unidades');
+        if (cantidadInput && cantidadInput.classList) cantidadInput.classList.add('border-red-500');
+      } else if (!Number.isInteger(cantidad)) {
+        filaErrores.push('Para enviar, cantidad debe ser entero ≥ 1');
+        if (cantidadInput && cantidadInput.classList) cantidadInput.classList.add('border-red-500');
+      }
 
-    if (isNaN(precio) || precio <= 0) {
-      filaErrores.push('Precio debe ser > $0');
-      if (precioInput && precioInput.classList) precioInput.classList.add('border-red-500');
+      if (isNaN(precio) || precio <= 0) {
+        filaErrores.push('Precio debe ser > $0');
+        if (precioInput && precioInput.classList) precioInput.classList.add('border-red-500');
+      }
+    } else {
+      // Guardado de borrador permite datos incompletos dentro de los límites:
+      // Si se ingresa cantidad, no debe ser negativa ni superar 10,000 unidades
+      if (!isNaN(cantidad)) {
+        if (cantidad < 0) {
+          filaErrores.push('Cantidad no puede ser negativa');
+          if (cantidadInput && cantidadInput.classList) cantidadInput.classList.add('border-red-500');
+        } else if (cantidad > 10000) {
+          filaErrores.push('Máximo 10,000 unidades');
+          if (cantidadInput && cantidadInput.classList) cantidadInput.classList.add('border-red-500');
+        }
+      }
+      if (!isNaN(precio) && precio < 0) {
+        filaErrores.push('Precio no puede ser negativo');
+        if (precioInput && precioInput.classList) precioInput.classList.add('border-red-500');
+      }
     }
 
     if (filaErrores.length > 0) {
@@ -2398,11 +2491,11 @@ window.guardarBorrador = async function() {
   const total = state.nuevaSolicitudForm.items.reduce((acc, it) => acc + (Number(it.cantidad || 0) * Number(it.precio || 0)), 0);
 
   const payloadBorrador = {
-    description: desc,
-    department: dep,
-    proveedorId: provId,
+    description: desc || 'Borrador sin título',
+    department: dep || 'DEP-TI',
+    proveedorId: provId || '',
     amount: total,
-    articulos: state.nuevaSolicitudForm.items.map(it => ({
+    articulos: (state.nuevaSolicitudForm.items || []).map(it => ({
       nombre: (it.nombre || '').trim() || 'Partida',
       cantidad: Number(it.cantidad || 1),
       precioUnitario: Number(it.precio || 0)
@@ -2445,8 +2538,30 @@ window.guardarBorrador = async function() {
   }
 };
 
+window.abrirBorrador = async function(id) {
+  if (window.apiService && typeof window.apiService.getBorradorById === 'function' && id) {
+    try {
+      const res = await window.apiService.getBorradorById(id);
+      if (res) {
+        const rawItem = res.borrador || res.draft || res.data || res;
+        const normalizado = window.normalizarBorradorDesdeApi ? window.normalizarBorradorDesdeApi(rawItem) : window.normalizarSolicitudDesdeApi(rawItem);
+        const idx = state.solicitudes.findIndex(x => x.id === id);
+        if (idx !== -1) {
+          state.solicitudes[idx] = { ...state.solicitudes[idx], ...normalizado };
+        } else {
+          state.solicitudes.push(normalizado);
+        }
+      }
+    } catch (err) {
+      console.warn(`[AURA] abrirBorrador ${id} desde API:`, err.message);
+    }
+  }
+  return window.editarBorrador(id);
+};
+
 window.editarBorrador = function(id) {
-  const s = state.solicitudes.find(x => x.id === id);
+  let s = state.solicitudes.find(x => x.id === id) || (state.borradoresRemotos && state.borradoresRemotos.find(b => (b.id || b.draftId) === id));
+
   if (!s) {
     showToast('Borrador no encontrado.', 'warning');
     return;
@@ -2456,6 +2571,8 @@ window.editarBorrador = function(id) {
     showToast(`El borrador ${id} se encuentra en proceso de registro en AWS (REGISTERING) y no puede ser editado.`, 'warning');
     return;
   }
+
+  // Establecer estado de edición de forma inmediata y síncrona
   state.editingDraftId = id;
   const rawItems = (s.items && s.items.length > 0) ? s.items : [{ nombre: '', cantidad: 1, precio: 0, subtotal: 0 }];
   const itemsNormalizados = rawItems.map(it => {
@@ -2479,6 +2596,33 @@ window.editarBorrador = function(id) {
     items: itemsNormalizados
   };
   navigateTo('nueva_solicitud');
+
+  // Si hay servicio API disponible con token, refrescar la versión remota de DynamoDB en segundo plano
+  if (window.apiService && typeof window.apiService.getBorradorById === 'function' && id) {
+    const token = window.apiService.token || (window.authService && window.authService.getAccessToken && window.authService.getAccessToken());
+    if (token) {
+      window.apiService.getBorradorById(id).then(res => {
+        if (res) {
+          const rawItem = res.borrador || res.draft || res.data || res;
+          const normalizado = window.normalizarBorradorDesdeApi ? window.normalizarBorradorDesdeApi(rawItem) : window.normalizarSolicitudDesdeApi(rawItem);
+          const idx = state.solicitudes.findIndex(x => x.id === id);
+          if (idx !== -1) {
+            state.solicitudes[idx] = { ...state.solicitudes[idx], ...normalizado };
+          } else {
+            state.solicitudes.push(normalizado);
+          }
+          if (state.editingDraftId === id && normalizado) {
+            state.nuevaSolicitudForm.descripcion = normalizado.descripcion || state.nuevaSolicitudForm.descripcion;
+            if (normalizado.items && normalizado.items.length > 0) {
+              state.nuevaSolicitudForm.items = normalizado.items;
+            }
+          }
+        }
+      }).catch(err => {
+        console.warn(`[AURA] Refresco en segundo plano de borrador ${id}:`, err.message);
+      });
+    }
+  }
 };
 
 window.eliminarBorrador = async function(id, version) {
@@ -2930,24 +3074,59 @@ window.recargarAdminUsuariosApi = async function() {
   state.apiState.isLoading = true;
   render();
   try {
-    const estadoFiltro = state.adminFiltroEstado || '';
+    const estadoFiltro = (state.adminFiltroEstado || '').trim();
     let records = [];
 
-    // Si el filtro es "Todos" (vacío), consultar en paralelo PENDING_APPROVAL, APPROVED y REJECTED
-    // porque el backend por omisión solo consulta PENDING_APPROVAL
-    if (!estadoFiltro || estadoFiltro === 'TODOS' || estadoFiltro === 'Todos') {
-      const [resPending, resApproved, resRejected] = await Promise.allSettled([
-        window.apiService.getAdminUsuarios('PENDING_APPROVAL'),
-        window.apiService.getAdminUsuarios('APPROVED'),
-        window.apiService.getAdminUsuarios('REJECTED')
+    // Función auxiliar para consumir exhaustivamente la paginación de un estado
+    const consumirPaginacionEstado = async (status) => {
+      let acumulados = [];
+      let cursor = null;
+      let pageCount = 0;
+      const MAX_PAGES = 10; // Límite de seguridad contra bucles
+
+      do {
+        pageCount++;
+        const res = await window.apiService.getAdminUsuarios(status, cursor);
+        if (!res) break;
+
+        const paginaItems = res.solicitudes || res.usuarios || (Array.isArray(res) ? res : []);
+        acumulados = acumulados.concat(paginaItems);
+
+        // Detectar si hay más registros y cursor siguiente
+        cursor = res.siguienteCursor || res.nextCursor || res.nextToken || res.cursor || null;
+        const hayMas = Boolean(res.hayMasRegistros || res.hasMore || (cursor && paginaItems.length > 0));
+
+        if (!hayMas || !cursor || pageCount >= MAX_PAGES) {
+          break;
+        }
+      } while (cursor);
+
+      return acumulados;
+    };
+
+    // Si el filtro es "Todos" (vacío o 'TODOS'), consumir la paginación de cada estado (PENDING_APPROVAL, APPROVED, REJECTED)
+    // Representa las altas del flujo de incorporación en DynamoDB Business
+    if (!estadoFiltro || estadoFiltro.toUpperCase() === 'TODOS') {
+      const [pendingList, approvedList, rejectedList] = await Promise.all([
+        consumirPaginacionEstado('PENDING_APPROVAL'),
+        consumirPaginacionEstado('APPROVED'),
+        consumirPaginacionEstado('REJECTED')
       ]);
-      const getList = r => (r.status === 'fulfilled' && r.value) 
-        ? (r.value.solicitudes || r.value.usuarios || (Array.isArray(r.value) ? r.value : [])) 
-        : [];
-      records = [...getList(resPending), ...getList(resApproved), ...getList(resRejected)];
+
+      const todos = [...pendingList, ...approvedList, ...rejectedList];
+
+      // Deduplicar por identificador único
+      const map = new Map();
+      todos.forEach(u => {
+        const key = u.sub || u.userId || u.id || u.email;
+        if (key && !map.has(key)) {
+          map.set(key, u);
+        }
+      });
+      records = Array.from(map.values());
     } else {
-      const res = await window.apiService.getAdminUsuarios(estadoFiltro);
-      records = (res && (res.solicitudes || res.usuarios || (Array.isArray(res) ? res : []))) || [];
+      // Consumir la paginación del estado específico seleccionado
+      records = await consumirPaginacionEstado(estadoFiltro);
     }
 
     state.adminUsuarios = records;
@@ -3086,6 +3265,49 @@ window.anularSolicitud = async function(id) {
 };
 
 // ----------------- CONTROLADORES: BORRADORES EN AWS DYNAMODB -----------------
+window.normalizarBorradorDesdeApi = function(b) {
+  if (!b) return null;
+  const monto = Number(b.amount !== undefined ? b.amount : (b.monto !== undefined ? b.monto : (b.total !== undefined ? b.total : 0)));
+  const provObj = (state.proveedores || []).find(p => p.id === (b.proveedorId || b.proveedor));
+  const rawItems = b.articulos || b.items || [];
+  const itemsNormalizados = Array.isArray(rawItems) ? rawItems.map(it => {
+    const cantidad = Number(it.cantidad || it.quantity || 1);
+    const precio = Number(it.precio !== undefined ? it.precio : (it.precioUnitario !== undefined ? it.precioUnitario : (it.unitPrice !== undefined ? it.unitPrice : 0)));
+    const subtotal = Number(it.subtotal !== undefined ? it.subtotal : (cantidad * precio));
+    return {
+      nombre: it.nombre || it.name || it.descripcion || 'Partida',
+      cantidad,
+      precio,
+      precioUnitario: precio,
+      subtotal
+    };
+  }) : [];
+
+  const statusRaw = String(b.status || b.estado || '').toUpperCase();
+  const isRegistering = statusRaw === 'REGISTERING';
+
+  return {
+    id: b.id || b.draftId,
+    draftId: b.draftId || b.id,
+    requestId: b.requestId || null,
+    descripcion: b.description || b.descripcion || 'Borrador sin título',
+    solicitante: b.applicant || (state.currentUser ? state.currentUser.name : 'Carlos Mendoza'),
+    applicantSub: b.applicantSub || (state.currentUser ? state.currentUser.sub : null),
+    departamento: b.department || b.departamento || 'DEP-TI',
+    proveedorId: b.proveedorId || (provObj ? provObj.id : ''),
+    proveedor: (provObj ? provObj.nombre : (b.proveedor || b.proveedorId)) || (b.proveedorId ? b.proveedorId : 'Sin proveedor asignado'),
+    total: monto,
+    monto: monto,
+    estado: isRegistering ? 'en_revision' : 'borrador',
+    status: b.status || (isRegistering ? 'REGISTERING' : 'DRAFT'),
+    fecha: isRegistering ? 'Registrando...' : 'Borrador',
+    items: itemsNormalizados,
+    version: Number(b.version || 1),
+    submitVersion: Number(b.submitVersion || b.version || 1),
+    esAltoMonto: monto > 1000
+  };
+};
+
 window.recargarBorradoresApi = async function() {
   if (!window.apiService) return;
   // Compras no dictamina ni ve borradores privados
@@ -3099,47 +3321,7 @@ window.recargarBorradoresApi = async function() {
     const res = await window.apiService.getBorradores();
     if (res && Array.isArray(res.borradores)) {
       state.borradoresRemotos = res.borradores;
-      const draftsNormalizados = res.borradores.map(b => {
-        const monto = Number(b.amount || b.monto || 0);
-        const provObj = state.proveedores.find(p => p.id === (b.proveedorId || b.proveedor));
-        const rawItems = b.articulos || b.items || [];
-        const itemsNormalizados = Array.isArray(rawItems) ? rawItems.map(it => {
-          const cantidad = Number(it.cantidad || it.quantity || 1);
-          const precio = Number(it.precio !== undefined ? it.precio : (it.precioUnitario !== undefined ? it.precioUnitario : (it.unitPrice !== undefined ? it.unitPrice : 0)));
-          const subtotal = Number(it.subtotal !== undefined ? it.subtotal : (cantidad * precio));
-          return {
-            nombre: it.nombre || it.name || it.descripcion || 'Partida',
-            cantidad,
-            precio,
-            precioUnitario: precio,
-            subtotal
-          };
-        }) : [];
-
-        const statusRaw = String(b.status || b.estado || '').toUpperCase();
-        const isRegistering = statusRaw === 'REGISTERING';
-
-        return {
-          id: b.id || b.draftId,
-          draftId: b.draftId || b.id,
-          requestId: b.requestId || null,
-          descripcion: b.description || b.descripcion || 'Borrador sin título',
-          solicitante: b.applicant || (state.currentUser ? state.currentUser.name : 'Carlos Mendoza'),
-          applicantSub: b.applicantSub || (state.currentUser ? state.currentUser.sub : null),
-          departamento: b.department || b.departamento || 'DEP-TI',
-          proveedorId: b.proveedorId || (provObj ? provObj.id : 'PRV-001'),
-          proveedor: (provObj ? provObj.nombre : (b.proveedor || b.proveedorId)) || 'Proveedor Asignado',
-          total: monto,
-          monto: monto,
-          estado: isRegistering ? 'en_revision' : 'borrador',
-          status: b.status || (isRegistering ? 'REGISTERING' : 'DRAFT'),
-          fecha: isRegistering ? 'Registrando...' : 'Borrador',
-          items: itemsNormalizados,
-          version: Number(b.version || 1),
-          submitVersion: Number(b.submitVersion || b.version || 1),
-          esAltoMonto: monto > 1000
-        };
-      });
+      const draftsNormalizados = res.borradores.map(b => window.normalizarBorradorDesdeApi(b)).filter(Boolean);
 
       state.solicitudes = state.solicitudes.filter(s => s.estado !== 'borrador');
       state.solicitudes = [...draftsNormalizados, ...state.solicitudes];

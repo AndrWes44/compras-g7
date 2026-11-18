@@ -98,8 +98,26 @@ async function runFase10Tests() {
     window.render = renderOriginal;
   });
 
-  // Test 2: Validación de cantidades: máximo 10,000 unidades y entero ≥ 1 para envío
-  await itAsync('2. validarFormularioSolicitud rechaza cantidades > 10,000 y decimales en envío formal', async () => {
+  // Test 2: Validación de cantidades y datos incompletos en borrador vs envío formal
+  await itAsync('2. validarFormularioSolicitud permite datos incompletos para borrador pero exige completos para envío', async () => {
+    // Para borrador: sin descripción, sin proveedor y con precio 0 debe ser válido
+    window.state.nuevaSolicitudForm = {
+      descripcion: '',
+      departamento: 'DEP-TI',
+      proveedorId: '',
+      items: [
+        { nombre: '', cantidad: 5, precio: 0 }
+      ]
+    };
+    const erroresBorrador = window.validarFormularioSolicitud(false);
+    assert.strictEqual(erroresBorrador.length, 0, 'El borrador debe permitir datos incompletos dentro de límites');
+
+    // Si excede 10,000 unidades en borrador, sí debe señalar error
+    window.state.nuevaSolicitudForm.items[0].cantidad = 10001;
+    const erroresBorradorExcedido = window.validarFormularioSolicitud(false);
+    assert(erroresBorradorExcedido.some(e => e.mensaje.includes('10,000')), 'Borrador debe respetar límite de 10,000 unidades');
+
+    // Para envío formal: exige descripción, proveedor oficial, cantidad entera ≥ 1 y precio > 0
     window.state.nuevaSolicitudForm = {
       descripcion: 'Adquisición de suministros',
       departamento: 'DEP-TI',
@@ -161,13 +179,32 @@ async function runFase10Tests() {
     assert.strictEqual(llamadaComercial, false, 'No deben ejecutarse consultas a APIs comerciales siendo Admin');
   });
 
-  // Test 5: recargarAdminUsuariosApi lee res.solicitudes y combina estados para "Todos"
-  await itAsync('5. recargarAdminUsuariosApi lee res.solicitudes y combina estados para filtro Todos', async () => {
+  // Test 5: recargarAdminUsuariosApi consume la paginación de cada estado para filtro Todos
+  await itAsync('5. recargarAdminUsuariosApi consume la paginación de cada estado y combina altas en Todos', async () => {
     window.state.adminFiltroEstado = '';
 
-    window.apiService.getAdminUsuarios = async (estado) => {
+    const llamadasPorEstado = {
+      PENDING_APPROVAL: 0,
+      APPROVED: 0,
+      REJECTED: 0
+    };
+
+    window.apiService.getAdminUsuarios = async (estado, cursor) => {
+      llamadasPorEstado[estado] = (llamadasPorEstado[estado] || 0) + 1;
       if (estado === 'PENDING_APPROVAL') {
-        return { solicitudes: [{ id: 'U-PENDING', email: 'p@g7.com', status: 'PENDING_APPROVAL' }] };
+        if (!cursor) {
+          return {
+            solicitudes: [{ id: 'U-P1', email: 'p1@g7.com', status: 'PENDING_APPROVAL' }],
+            siguienteCursor: 'cursor-p2',
+            hayMasRegistros: true
+          };
+        } else {
+          return {
+            solicitudes: [{ id: 'U-P2', email: 'p2@g7.com', status: 'PENDING_APPROVAL' }],
+            siguienteCursor: null,
+            hayMasRegistros: false
+          };
+        }
       }
       if (estado === 'APPROVED') {
         return { solicitudes: [{ id: 'U-APPROVED', email: 'a@g7.com', status: 'APPROVED' }] };
@@ -180,10 +217,12 @@ async function runFase10Tests() {
 
     await window.recargarAdminUsuariosApi();
 
-    assert.strictEqual(window.state.adminUsuarios.length, 3, 'Debe combinar los 3 estados al consultar Todos');
-    assert(window.state.adminUsuarios.some(u => u.status === 'PENDING_APPROVAL'));
-    assert(window.state.adminUsuarios.some(u => u.status === 'APPROVED'));
-    assert(window.state.adminUsuarios.some(u => u.status === 'REJECTED'));
+    assert(llamadasPorEstado.PENDING_APPROVAL >= 2, 'Debe haber consumido al menos 2 páginas para PENDING_APPROVAL');
+    assert.strictEqual(window.state.adminUsuarios.length, 4, 'Debe combinar todas las altas de todas las páginas');
+    assert(window.state.adminUsuarios.some(u => u.id === 'U-P1'));
+    assert(window.state.adminUsuarios.some(u => u.id === 'U-P2'));
+    assert(window.state.adminUsuarios.some(u => u.id === 'U-APPROVED'));
+    assert(window.state.adminUsuarios.some(u => u.id === 'U-REJECTED'));
   });
 
   // Test 6: Modal administrativo propio maneja confirmación con rol y comentario obligatorio
@@ -226,6 +265,54 @@ async function runFase10Tests() {
     const html = window.renderTopNav();
     assert(html.includes('recargarAdminUsuariosApi()'), 'El botón debe invocar recargarAdminUsuariosApi()');
     assert(!html.includes('recargarSolicitudesApi()'), 'No debe invocar recargarSolicitudesApi() para Admin');
+  });
+
+  // Test 8: Apertura de borradores mediante /api/borradores/:id
+  await itAsync('8. Apertura de borradores mediante verDetalleSolicitud y editarBorrador consulta getBorradorById', async () => {
+    let getBorradorLlamadoCon = null;
+    let getSolicitudLlamado = false;
+
+    window.apiService.getBorradorById = async (id) => {
+      getBorradorLlamadoCon = id;
+      return {
+        borrador: {
+          id: id,
+          draftId: id,
+          description: 'Borrador remoto desde DynamoDB',
+          department: 'DEP-TI',
+          amount: 250,
+          status: 'DRAFT',
+          version: 3,
+          articulos: [{ nombre: 'Laptop Dell', cantidad: 1, precioUnitario: 250 }]
+        }
+      };
+    };
+
+    window.apiService.getSolicitudById = async () => {
+      getSolicitudLlamado = true;
+      return null;
+    };
+
+    window.state.solicitudes = [
+      { id: 'BR-TEST-001', estado: 'borrador', descripcion: 'Borrador en cache', version: 1 }
+    ];
+
+    // Probar verDetalleSolicitud con borrador
+    await window.verDetalleSolicitud('BR-TEST-001');
+
+    assert.strictEqual(getBorradorLlamadoCon, 'BR-TEST-001', 'Debe llamar a getBorradorById(/api/borradores/:id)');
+    assert.strictEqual(getSolicitudLlamado, false, 'No debe invocar getSolicitudById para un borrador');
+
+    const draftActualizado = window.state.solicitudes.find(s => s.id === 'BR-TEST-001');
+    assert.strictEqual(draftActualizado.version, 3, 'Debe haber actualizado la versión obtenida de DynamoDB');
+    assert.strictEqual(draftActualizado.descripcion, 'Borrador remoto desde DynamoDB');
+
+    // Probar abrirBorrador
+    getBorradorLlamadoCon = null;
+    await window.abrirBorrador('BR-TEST-001');
+    assert.strictEqual(getBorradorLlamadoCon, 'BR-TEST-001', 'abrirBorrador debe consultar getBorradorById');
+    assert.strictEqual(window.state.editingDraftId, 'BR-TEST-001');
+    assert.strictEqual(window.state.nuevaSolicitudForm.descripcion, 'Borrador remoto desde DynamoDB');
   });
 
   console.log('\n===============================================================');
