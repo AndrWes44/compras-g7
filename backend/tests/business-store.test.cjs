@@ -186,3 +186,37 @@ test("paginacion filtrada vacia conserva cursor y limita trabajo a cinco queries
   assert.ok(response.siguienteCursor);
   assert.equal(response.alcanceTotal, "pagina");
 });
+
+
+test("regresion formulario: cantidades limite y descripcion completa persisten sin truncar", async () => {
+  const f = fixture();
+  const description = "Compra de materiales para el departamento de tecnologia";
+  for (const cantidad of [0, 2, 10000]) {
+    const created = await f.store.createDraft(owner, {
+      description, articulos: [{ nombre: "Cuaderno", cantidad, precioUnitario: 14 }]
+    });
+    const saved = await f.store.getDraft(owner, created.id);
+    assert.equal(saved.description, description);
+    assert.equal(saved.articulos[0].cantidad, cantidad);
+    assert.equal(saved.articulos[0].precioUnitario, 14);
+  }
+});
+
+test("regresion formulario: cantidad invalida no crea ni altera un borrador", async () => {
+  const f = fixture();
+  const original = await f.store.createDraft(owner, {
+    description: "Borrador valido", articulos: [{ nombre: "Cuaderno", cantidad: 2, precioUnitario: 14 }]
+  });
+  const writes = () => f.commands.filter(c => c.constructor.name === "PutCommand").length;
+  const before = writes();
+  for (const cantidad of [10001, 55555, -1, 1.5, "2"]) {
+    const bad = { articulos: [{ nombre: "Cuaderno", cantidad, precioUnitario: 14 }] };
+    await assert.rejects(f.store.createDraft(owner, bad), { status: 400 });
+    await assert.rejects(f.store.updateDraft(owner, original.id, bad, original.version), { status: 400 });
+  }
+  assert.equal(writes(), before);
+  const saved = await f.store.getDraft(owner, original.id);
+  assert.equal(saved.version, original.version);
+  assert.equal(saved.articulos[0].cantidad, 2);
+  assert.equal(saved.description, "Borrador valido");
+});

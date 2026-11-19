@@ -112,3 +112,37 @@ test('administracion separada: un Director no administra y Administrador sin rol
   const login=await f.request('POST','/api/auth/login',null,{email:'admin@example.invalid',password:'placeholder'});
   assert.equal(login.status,200);assert.equal(login.data.user.role,'administrador');
 }));
+
+
+test('regresion formulario: cantidades fuera de rango no inician Step Functions',()=>fixture(async f=>{
+  for(const cantidad of [0,-1,1.5,10001,55555]) {
+    const data={...payload,amount:Math.max(1,cantidad),articulos:[{nombre:'Cuaderno',cantidad,precioUnitario:1}]};
+    const result=await f.request('POST','/api/solicitudes','s',data);
+    assert.equal(result.status,400,'cantidad '+cantidad);
+  }
+  assert.equal(f.calls.starts,0);
+  assert.equal(f.docs.size,0);
+  for(const cantidad of [2,10000]) {
+    const data={...payload,description:'Compra completa de cuadernos',amount:cantidad,articulos:[{nombre:'Cuaderno',cantidad,precioUnitario:1}]};
+    const result=await f.request('POST','/api/solicitudes','s',data);
+    assert.equal(result.status,202,'cantidad valida '+cantidad);
+    const stored=f.docs.get(result.data.requestId);
+    assert.equal(stored.description,data.description);
+    assert.equal(stored.amount,cantidad);
+  }
+  assert.equal(f.calls.starts,2);
+}));
+
+test('regresion formulario: envio invalido conserva borrador sin bloquear ni iniciar flujo',()=>fixture(async f=>{
+  await f.request('POST','/api/borradores','s',payload);
+  const draft=f.drafts.get('owner:D1');
+  // Simular documento legado: no depender de la validacion al crearlo.
+  draft.articulos=[{nombre:'Cuaderno',cantidad:55555,precioUnitario:1}];
+  draft.amount=55555;
+  const result=await f.request('POST','/api/borradores/D1/enviar','s',{version:1});
+  assert.equal(result.status,400);
+  assert.equal(f.calls.starts,0);
+  assert.equal(draft.status,'DRAFT');
+  assert.equal(draft.requestId,undefined);
+  assert.equal(draft.submissionPayload,undefined);
+}));

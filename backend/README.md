@@ -43,7 +43,21 @@ Un 202 significa REGISTERING, no persistencia confirmada. Consultar `GET /api/so
 
 `GET /api/solicitudes` acepta limit entre 1 y 100 y cursor opaco. total corresponde a la pagina, no a toda la tabla. Usar siguienteCursor y hayMasRegistros; cada llamada evalua como maximo cinco paginas de DynamoDB. Se aplica autorizacion defensiva a los registros devueltos. Un indice opcional por correo no garantiza recuperar registros tras cambiar el correo.
 
-`PATCH /api/solicitudes/:id/decision` acepta APPROVED o REJECTED; el rechazo requiere motivo. Admite comentarios/comments/comentario si no se contradicen. Una condicion atomica verifica estado, monto, rol y propietario; las decisiones concurrentes devuelven conflicto. Los registros antiguos incompletos no reciben un propietario o permiso inventado.
+`PATCH /api/solicitudes/:id/decision` acepta APPROVED o REJECTED; tanto la aprobacion como el rechazo requieren un comentario obligatorio. Admite comentarios/comments/comentario si no se contradicen. Una condicion atomica verifica estado, monto, rol y propietario; las decisiones concurrentes devuelven conflicto. Los registros antiguos incompletos no reciben un propietario o permiso inventado.
+
+## Borradores, catalogo y administracion online
+
+Contrato completo y configuracion: [INTEGRACION_BACKEND_ONLINE.md](docs/INTEGRACION_BACKEND_ONLINE.md). La URL base del entorno del equipo es `https://6pkbutuqre.execute-api.us-east-2.amazonaws.com`; no se necesita un servidor local para utilizar el despliegue AWS. Los cambios de Git no actualizan Lambda automaticamente.
+
+- Borradores privados: GET/POST `/api/borradores`, GET/PATCH/DELETE `/api/borradores/:id` y POST `/api/borradores/:id/enviar`. Solo el Solicitante propietario puede operarlos. PATCH y DELETE requieren la version vigente y estado DRAFT. Tras PATCH, usar la version devuelta para enviar. Un envio bloqueado conserva requestId y submitVersion para reintentos seguros.
+- Un borrador permite descripcion vacia y campos incompletos, pero no valores fuera de rango. Las cantidades presentes deben ser numeros JSON enteros entre 0 y 10000. El envio exige cantidades entre 1 y 10000, 1 a 50 articulos completos, descripcion de 1 a 1000 caracteres, proveedor ACTIVE y total exacto. Una cantidad de 55555 es invalida incluso al guardar borrador.
+- Proveedores: GET/POST `/api/proveedores` y GET/PATCH/DELETE `/api/proveedores/:id`. PATCH y DELETE requieren version. DELETE solo admite INACTIVE y aplica baja logica DELETED, conservando referencias historicas. Compras accede a datos completos; los otros roles comerciales reciben resumen y el Solicitante solo proveedores activos.
+- Administrador es una capacidad separada de los cuatro roles comerciales. Gestiona `GET /api/admin/usuarios` y `PATCH /api/admin/usuarios/:sub`, no obtiene acceso comercial automaticamente. Un Director tampoco administra cuentas por su rol comercial.
+- GET `/api/admin/usuarios?estado=PENDING_APPROVAL` devuelve `solicitudes`, no `usuarios`, junto a total de pagina y cursores. Sin estado se consultan pendientes (incluye APPLYING). APPROVED, REJECTED y APPLYING son filtros explicitos; no hay filtro Todos. La bandeja contiene altas del flujo de registro, no un inventario de todas las cuentas preexistentes de Cognito.
+- Registro: POST `/api/auth/registro`, `/api/auth/confirmar` y `/api/auth/reenviar`. Verificar correo no concede acceso: se requiere aprobacion administrativa y asignacion de exactamente un rol comercial. El cambio administrativo de rol exige un nuevo inicio de sesion. No se implementa recuperacion de contrasena en este backend.
+- POST `/api/solicitudes/:id/anular` permite al propietario anular solo PENDING, con comentarios obligatorios. Las decisiones humanas se procesan en Express con escritura condicionada; Step Functions registra la solicitud, no sustituye al aprobador.
+
+Las validaciones del formulario deben reflejar estos limites y mostrar el error junto al campo; no eliminar validaciones del servidor para aceptar un formulario incorrecto. HTTP 202 es registro en proceso; PERSISTED confirma almacenamiento y APPROVED confirma una decision posterior distinta.
 
 ## Protecciones y limites
 
@@ -52,11 +66,11 @@ Un 202 significa REGISTERING, no persistencia confirmada. Consultar `GET /api/so
 - Los contadores son por proceso y ventana fija. No constituyen proteccion distribuida entre instancias Lambda. La capacidad adicional corresponde a API Gateway/WAF y al responsable de AWS.
 - La IP local ignora X-Forwarded-For; en Lambda procede del contexto de API Gateway.
 - JSON de login limitado a 16 KB y API a 100 KB. Los tokens y contrasenas no se imprimen en los logs del servidor.
-- proveedorId se valida por formato; no se consulta un catalogo ni se implementa CRUD de proveedores.
-- La Lambda escritora inspeccionada conserva correo y descarta applicantSub. Corregirla requiere coordinacion con AWS. Hasta entonces los registros sin sub usan compatibilidad por correo.
+- proveedorId se valida por formato y contra un proveedor ACTIVE del catalogo antes de iniciar un envio nuevo. El CRUD de proveedores esta implementado; solo Compras puede crear, actualizar y dar de baja con control de version.
+- Express envia applicant y applicantSub derivados de Cognito al flujo de registro. La conservacion de esos campos en la Lambda escritora desplegada debe verificarse con AWS; los registros antiguos sin sub usan compatibilidad por correo.
 - Los cambios locales no actualizan automaticamente la Lambda desplegada. No incluir `.env`, pruebas ni credenciales en un paquete de produccion.
 
-El frontend puede conservar sesiones simuladas, borradores y totales diferentes. Esas pantallas no demuestran persistencia; verificar las respuestas de esta API. Este trabajo no cambia el frontend.
+La interfaz debe consumir la API real sin sesiones simuladas ni mezclas de datos de demostracion. Una pantalla visible no demuestra persistencia: consultar las respuestas de esta API. Los cambios del frontend y su publicacion se coordinan con sus responsables.
 
 ## Empaquetado
 
@@ -66,7 +80,7 @@ El proyecto es privado y package.json limita el empaquetado npm a src/server.js 
 
 El origen publicado es `http://g7-dev-frontend-aura-021686096746.s3-website.us-east-2.amazonaws.com`. Esta incluido en `.env.example` para documentar la configuracion. La plantilla no se carga automaticamente en Lambda: conservar esa lista en las variables de entorno del despliegue o en la plantilla de infraestructura que administre el responsable AWS. No subir .env a Git.
 
-Usar origenes exactos y sin barra final; no agregar `*` como permiso global. El middleware actual responde OPTIONS con 204 para los origenes permitidos y rechaza los demas con 403. Solo anuncia GET, POST, PATCH y OPTIONS, que corresponden al contrato actual. API Gateway tiene su propia configuracion CORS y debe coordinarse con esta lista.
+Usar origenes exactos y sin barra final; no agregar `*` como permiso global. El middleware actual responde OPTIONS con 204 para los origenes permitidos y rechaza los demas con 403. Anuncia GET, POST, PATCH, DELETE y OPTIONS, que corresponden al contrato actual. API Gateway tiene su propia configuracion CORS y debe coordinarse con esta lista.
 
 Para integradores del frontend: el login devuelve `tokens.accessToken` y `user`; no devuelve un token plano en `data.token`. Un 401 por credenciales invalidas debe mostrarse como rechazo y nunca habilitar una sesion simulada. La implementacion visual y el almacenamiento de la sesion corresponden al frontend.
 
