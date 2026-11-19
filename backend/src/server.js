@@ -570,8 +570,10 @@ function createApp({ store, workflow, identity, business, access, config = {} })
         doc = await store.getRequest(req.params.id);
       if (!doc || !C.canSee(doc, req.usuario))
         return fail(res, 404, "Solicitud no encontrada.");
-      if (doc.status !== "PENDING")
+      if (["APPROVED", "REJECTED", "CANCELLED"].includes(doc.status))
         return fail(res, 409, "La solicitud ya fue decidida.");
+      if (doc.status !== "PENDING")
+        return fail(res, 409, "El estado de la solicitud no admite dictamen en el flujo actual. Actualiza el listado o solicita la revisión del registro.");
       if (!C.canDecide(doc, req.usuario))
         return fail(res, 403, "No puedes decidir esta solicitud.");
       const solicitud = await store.decide(doc, decision, req.usuario);

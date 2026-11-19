@@ -11,7 +11,7 @@ const users={s:{sub:'owner',email:'owner@example.invalid',roles:['Solicitante']}
 const problem=(status,message)=>Object.assign(new Error(message),{status});
 async function fixture(run,{enabled=true,registration=true}={}){
   const docs=new Map(),drafts=new Map(),executions=new Map(),suppliers=new Map([['PRV1',{id:'PRV1',name:'Proveedor',status:'ACTIVE',version:1,taxId:'private',bankName:'Private Bank',bankAccount:'private'}]]);
-  const calls={starts:0,cancel:0,admin:0};
+  const calls={starts:0,cancel:0,decide:0,admin:0};
   const business={
     getSupplier:async id=>suppliers.get(id),
     listSuppliers:async(user,opts)=>({items:[...suppliers.values()].filter(x=>!opts.activeOnly||x.status==='ACTIVE').map(x=>user.roles.includes('Compras')?x:(({taxId,bankName,bankAccount,...rest})=>rest)(x)),total:suppliers.size}),
@@ -27,7 +27,8 @@ async function fixture(run,{enabled=true,registration=true}={}){
     markDraftSubmitted:async(user,id,requestId)=>{drafts.get(user.sub+':'+id).status='SUBMITTED';}
   };
   const store={rateLimit:async()=>1,getRequest:async id=>docs.get(id),listRequests:async(user)=>({solicitudes:[...docs.values()].filter(x=>C.canSee(x,user)),alcanceTotal:'pagina',siguienteCursor:null,hayMasRegistros:false}),
-    cancelRequest:async(doc,user,comments)=>{calls.cancel++;if(doc.status!=='PENDING')throw problem(409,'Conflict');doc.status='CANCELLED';return doc;}};
+    cancelRequest:async(doc,user,comments)=>{calls.cancel++;if(doc.status!=='PENDING')throw problem(409,'Conflict');doc.status='CANCELLED';return doc;},
+    decide:async()=>{calls.decide++;throw problem(500,'Unexpected decision write');}};
   const workflow={find:async id=>executions.get(id),start:async payload=>{calls.starts++;executions.set(payload.requestId,{input:JSON.stringify(payload),status:'RUNNING'});docs.set(payload.requestId,{...payload,status:'PENDING'});}};
   const access={register:async()=>({success:true,mensaje:'Correo enviado'}),confirm:async()=>({success:true}),resend:async()=>({success:true}),assertAccountAccess:async()=>{},
     listPending:async user=>{calls.admin++;return {solicitudes:[],total:0};},decide:async()=>{calls.admin++;return {success:true};}};
@@ -90,6 +91,71 @@ test('anulacion requiere propietario y estado pendiente; no anula aprobadas',()=
   assert.equal((await f.request('POST','/api/solicitudes/REQ1/anular','s',{comentarios:'Motivo'})).status,200);
   assert.equal((await f.request('POST','/api/solicitudes/REQ1/anular','s',{comentarios:'Motivo'})).status,409);
   assert.equal(f.calls.cancel,1);
+}));
+test('regresion anulacion: estados finales se conservan y no llegan a persistencia',()=>fixture(async f=>{
+  for(const status of ['APPROVED','REJECTED','CANCELLED']) {
+    const id='REQ-final-'+status;
+    const original={requestId:id,status,amount:14.2,applicant:'owner@example.invalid',applicantSub:'owner',
+      history:[{status,by:'original-author',at:'2026-11-12T12:00:00.000Z'}]};
+    const snapshot=structuredClone(original);
+    f.docs.set(id,original);
+    const response=await f.request('POST','/api/solicitudes/'+id+'/anular','s',{comentarios:'Intento posterior al cierre'});
+    assert.equal(response.status,409,status);
+    assert.equal(response.data.success,false,status);
+    assert.equal(f.calls.cancel,0,status+' no debe invocar cancelRequest');
+    assert.deepEqual(f.docs.get(id),snapshot,status+' no debe cambiar documento ni historial');
+    const detail=await f.request('GET','/api/solicitudes/'+id,'s');
+    assert.equal(detail.status,200,status);
+    assert.deepEqual(detail.data.solicitud,snapshot,status+' conserva el estado al volver a consultar');
+  }
+}));
+test('regresion Director: registros legados o sin estado siguen legibles y no admiten dictamen',()=>fixture(async f=>{
+  const control={requestId:'REQ-pending-control',amount:1500,status:'PENDING',applicant:'owner@example.invalid',
+    applicantSub:'owner',requiereAprobacionDe:'Director'};
+  f.docs.set(control.requestId,control);
+  const cases=[['REQUIRES_SUPERVISOR',2800],['REQUIRES_MANAGER',7500],[undefined,2800],['UNKNOWN_STATE',7500]];
+  for(const [index,[status,amount]] of cases.entries()) {
+    const id='REQ-legacy-'+index;
+    const original={requestId:id,amount,applicant:'owner@example.invalid',applicantSub:'owner',
+      requiereAprobacionDe:'Director',history:[{status:'IMPORTED',at:'2026-11-09T12:00:00.000Z'}],
+      ...(status===undefined?{}:{status})};
+    const snapshot=structuredClone(original);
+    f.docs.set(id,original);
+    const before=await f.request('GET','/api/solicitudes/'+id,'d');
+    assert.equal(before.status,200,String(status));
+    assert.deepEqual(before.data.solicitud,snapshot,String(status)+' no debe convertirse en PENDING');
+    const inbox=await f.request('GET','/api/aprobaciones','d');
+    assert.equal(inbox.status,200,String(status));
+    assert.deepEqual(inbox.data.solicitudes.map(x=>x.requestId),[control.requestId],String(status)+' no es accionable');
+    const decision=await f.request('PATCH','/api/solicitudes/'+id+'/decision','d',
+      {decision:'APPROVED',comentarios:'Revisión de registro antiguo'});
+    assert.equal(decision.status,409,String(status));
+    assert.equal(decision.data.success,false,String(status));
+    assert.equal(decision.data.mensaje,'El estado de la solicitud no admite dictamen en el flujo actual. Actualiza el listado o solicita la revisión del registro.');
+    assert.equal(f.calls.decide,0,String(status)+' no debe invocar decide');
+    assert.deepEqual(f.docs.get(id),snapshot,String(status)+' no debe cambiar documento ni historial');
+    const after=await f.request('GET','/api/solicitudes/'+id,'d');
+    assert.equal(after.status,200,String(status));
+    assert.deepEqual(after.data.solicitud,snapshot,String(status)+' se conserva tras rechazar el dictamen');
+  }
+}));
+test('regresion Director: una solicitud final conserva su decision y no vuelve a la bandeja',()=>fixture(async f=>{
+  for(const status of ['APPROVED','REJECTED','CANCELLED']) {
+    const id='REQ-director-final-'+status;
+    const original={requestId:id,status,amount:2800,applicant:'owner@example.invalid',applicantSub:'owner',
+      requiereAprobacionDe:'Director',history:[{status,by:'original-author',at:'2026-11-12T12:00:00.000Z'}]};
+    const snapshot=structuredClone(original);
+    f.docs.set(id,original);
+    const inbox=await f.request('GET','/api/aprobaciones','d');
+    assert.equal(inbox.status,200,status);
+    assert.deepEqual(inbox.data.solicitudes,[],status+' no debe volver a pendientes');
+    const decision=await f.request('PATCH','/api/solicitudes/'+id+'/decision','d',
+      {decision:'APPROVED',comentarios:'Intento posterior al cierre'});
+    assert.equal(decision.status,409,status);
+    assert.equal(decision.data.mensaje,'La solicitud ya fue decidida.',status);
+    assert.equal(f.calls.decide,0,status+' no debe invocar decide');
+    assert.deepEqual(f.docs.get(id),snapshot,status+' no debe cambiar documento ni historial');
+  }
 }));
 test('bandeja pendientes respeta rol, monto, dueño y asignacion explicita',()=>fixture(async f=>{
   for(const [id,amount,status,assigned]of [['A',1000,'PENDING'],['B',1000.01,'PENDING'],['C',1,'APPROVED'],['D',1,'PENDING','another']])f.docs.set(id,{requestId:id,amount,status,applicant:'owner@example.invalid',requiereAprobacionDe:amount<=1000?'Gerente':'Director',...(assigned?{assignedApproverSub:assigned}:{})});

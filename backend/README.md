@@ -45,6 +45,8 @@ Un 202 significa REGISTERING, no persistencia confirmada. Consultar `GET /api/so
 
 `PATCH /api/solicitudes/:id/decision` acepta APPROVED o REJECTED; tanto la aprobacion como el rechazo requieren un comentario obligatorio. Admite comentarios/comments/comentario si no se contradicen. Una condicion atomica verifica estado, monto, rol y propietario; las decisiones concurrentes devuelven conflicto. Los registros antiguos incompletos no reciben un propietario o permiso inventado.
 
+Solo PENDING admite dictamen. Los estados finales APPROVED, REJECTED y CANCELLED devuelven HTTP 409 indicando que la solicitud ya fue decidida; los estados antiguos, desconocidos o ausentes devuelven HTTP 409 indicando que el estado no admite dictamen en el flujo actual. GET /api/aprobaciones excluye esos registros y GET /api/solicitudes/:id conserva su estado original. El frontend debe mostrarlo sin convertirlo automaticamente a pendiente. Diagnostico y 146 pruebas verificadas el 19/11/2026: [REVISION_ESTADOS_Y_FLUJO_20261119.md](docs/REVISION_ESTADOS_Y_FLUJO_20261119.md).
+
 ## Borradores, catalogo y administracion online
 
 Contrato completo y configuracion: [INTEGRACION_BACKEND_ONLINE.md](docs/INTEGRACION_BACKEND_ONLINE.md). La URL base del entorno del equipo es `https://6pkbutuqre.execute-api.us-east-2.amazonaws.com`; no se necesita un servidor local para utilizar el despliegue AWS. Los cambios de Git no actualizan Lambda automaticamente.
