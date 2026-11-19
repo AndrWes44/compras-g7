@@ -1,11 +1,12 @@
 {
   "name": "aura-compras-web",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "AURA Compras - Sistema Corporativo de Gestión y Aprobaciones (Laboratorio 2)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
+    "build:bundle": "powershell -Command \"Compress-Archive -Path public/* -DestinationPath dist_s3_bundle.zip -Force\"",
     "test": "node tests/test_frontend_suite.js && node tests/test_fase4_fase5.js && node tests/test_fase6.js && node tests/test_fase7.js && node tests/test_fase8.js && node tests/test_fase9.js && node tests/test_normalizador.js && node tests/test_fase10_admin_nuevasolicitud.js"
   },
   "dependencies": {

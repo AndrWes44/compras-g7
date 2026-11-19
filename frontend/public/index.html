@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>AURA Compras — Sistema de Gestión y Aprobaciones</title>
   
   <!-- Google Fonts: Inter -->
@@ -69,10 +72,10 @@
   <!-- Notification Toast Container -->
   <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-  <!-- AURA Compras Client Modules -->
-  <script src="/config.js"></script>
-  <script src="/auth.js"></script>
-  <script src="/api.js"></script>
-  <script src="/app.js"></script>
+  <!-- AURA Compras Client Modules (Versionados con Cache-Busting v1.1.0) -->
+  <script src="/config.js?v=1.1.0"></script>
+  <script src="/auth.js?v=1.1.0"></script>
+  <script src="/api.js?v=1.1.0"></script>
+  <script src="/app.js?v=1.1.0"></script>
 </body>
 </html>
