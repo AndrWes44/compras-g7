@@ -317,8 +317,10 @@
     }
 
     _getRoleTitle(role, isAdmin) {
-      if (isAdmin && (!role || role === 'admin')) return 'Administrador de Cuentas';
       const roleLower = String(role || '').toLowerCase();
+      if (isAdmin || roleLower === 'admin' || roleLower === 'administrador' || roleLower === 'administrador de cuentas') {
+        return 'Administrador de Cuentas';
+      }
       let title = '';
       switch (roleLower) {
         case 'gerente': title = 'Gerente Aprobador (hasta $1,000)'; break;
@@ -326,7 +328,6 @@
         case 'compras': title = 'Compras & Adquisiciones'; break;
         default: title = 'Solicitante Departamental'; break;
       }
-      if (isAdmin) title += ' (Administrador)';
       return title;
     }
   }

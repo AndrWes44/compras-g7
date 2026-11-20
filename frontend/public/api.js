@@ -79,26 +79,32 @@
           error.status = response.status;
           error.data = data;
 
-          // Manejo seguro de 401 Unauthorized (limpiar sesión y redirigir UNA sola vez)
+          // Manejo seguro de 401 Unauthorized (limpiar sesión, detener consultas y redirigir UNA sola vez)
           if (response.status === 401) {
-            if (window.authService && typeof window.authService.logout === 'function') {
-              window.authService.logout();
-            }
-            if (typeof window !== 'undefined' && typeof window.mostrarErrorModal === 'function') {
-              window.mostrarErrorModal({
-                title: 'Sesión Expirada o Inválida',
-                message: 'Tu sesión no es válida ante el backend de AWS o ha expirado. Por favor ingresa nuevamente.',
-                code: 401,
-                actionText: 'Ir al Login',
-                onAction: "handleLogout()"
-              });
-            }
             if (!this._isHandling401) {
               this._isHandling401 = true;
+              if (window.authService && typeof window.authService.logout === 'function') {
+                window.authService.logout();
+              }
+              // Detener consultas y estados de carga pendientes en cliente
+              if (typeof window !== 'undefined' && window.state) {
+                if (window.state.apiState) window.state.apiState.isLoading = false;
+                if (window.state.aprobacionesState) window.state.aprobacionesState.isLoading = false;
+                if (window.state.adminState) window.state.adminState.isLoading = false;
+              }
+              if (typeof window !== 'undefined' && typeof window.mostrarErrorModal === 'function') {
+                window.mostrarErrorModal({
+                  title: 'Sesión Expirada o Inválida',
+                  message: 'Tu sesión no es válida ante el backend de AWS o ha expirado. Por favor ingresa nuevamente.',
+                  code: 401,
+                  actionText: 'Ir al Login',
+                  onAction: "handleLogout()"
+                });
+              }
               if (typeof window !== 'undefined' && typeof window.navigateTo === 'function') {
                 window.navigateTo('login');
               }
-              setTimeout(() => { this._isHandling401 = false; }, 2000);
+              setTimeout(() => { this._isHandling401 = false; }, 3000);
             }
           } else if (response.status === 403) {
             if (typeof window !== 'undefined' && typeof window.mostrarErrorModal === 'function') {
@@ -213,8 +219,10 @@
       return res.data;
     }
 
-    async getAprobaciones() {
-      const res = await this.request('/api/aprobaciones', { method: 'GET' });
+    async getAprobaciones(limit = 20, cursor = null) {
+      let query = `?limit=${encodeURIComponent(limit)}`;
+      if (cursor) query += `&cursor=${encodeURIComponent(cursor)}`;
+      const res = await this.request(`/api/aprobaciones${query}`, { method: 'GET' });
       return res.data;
     }
 

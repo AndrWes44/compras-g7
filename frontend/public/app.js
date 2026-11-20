@@ -30,6 +30,19 @@ const state = window.state = {
   proveedores: [],
   adminUsuarios: [],
   borradoresRemotos: [],
+  aprobaciones: [],
+
+  // Operaciones en vuelo para evitar duplicidad o doble clic
+  inFlightOperations: new Set(),
+
+  // Estado reactivo de la bandeja de aprobaciones oficiales (GET /api/aprobaciones)
+  aprobacionesState: {
+    isConnected: null,
+    isLoading: false,
+    cursor: null,
+    hayMasRegistros: false,
+    totalApi: 0
+  },
 
   // Formulario reactivo para nueva solicitud o borrador
   nuevaSolicitudForm: {
@@ -93,6 +106,15 @@ const state = window.state = {
         initials: 'AM',
         badgeColor: 'bg-sky-600',
         email: state.currentUser?.email || 'compras@g7.com'
+      };
+    },
+    get admin() {
+      return {
+        name: (state.currentUser?.name) || 'Administrador',
+        roleTitle: 'Administrador de Cuentas',
+        initials: 'AD',
+        badgeColor: 'bg-purple-600',
+        email: state.currentUser?.email || 'admin@g7.com'
       };
     }
   }
@@ -400,16 +422,16 @@ function renderAdminUsuarios() {
                     </td>
                     <td class="py-3.5 px-4">
                       <span class="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-800 text-slate-200 border border-slate-700">
-                        ${u.assignedRole || u.role || 'Sin rol'}
+                        ${canonicalizarRol(u.assignedRole || u.role)}
                       </span>
                     </td>
                     <td class="py-3.5 px-4 font-mono text-slate-500">v${u.version || 1}</td>
                     <td class="py-3.5 px-4 text-center">
                       <div class="flex items-center justify-center gap-2">
                         <button onclick="abrirModalAprobarUsuario('${sub}', ${u.version || 1}, '${encodeURIComponent(u.email || '')}', '${encodeURIComponent(u.name || '')}')" class="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[11px] shadow">
-                          Aprobar / Asignar Rol
+                          ${status === 'APPROVED' ? 'Cambiar Rol' : 'Aprobar / Asignar Rol'}
                         </button>
-                        ${status !== 'REJECTED' ? `
+                        ${status !== 'APPROVED' && status !== 'REJECTED' ? `
                           <button onclick="rechazarUsuarioAdmin('${sub}', ${u.version || 1}, '${encodeURIComponent(u.email || '')}', '${encodeURIComponent(u.name || '')}')" class="px-2.5 py-1 rounded bg-red-600/80 hover:bg-red-600 text-white font-semibold text-[11px]">
                             Rechazar
                           </button>
@@ -427,26 +449,33 @@ function renderAdminUsuarios() {
   `;
 }
 
+function canonicalizarRol(rol) {
+  if (!rol) return 'Sin rol';
+  const rLower = String(rol).toLowerCase();
+  if (rLower === 'admin' || rLower === 'administrador' || rLower === 'administrador de cuentas') {
+    return 'Administrador de Cuentas';
+  }
+  return rol;
+}
+
 function renderRecuperarPassword() {
   return `
     <div class="min-h-screen flex items-center justify-center bg-aura-canvas p-4">
       <div class="w-full max-w-md bg-aura-card border border-aura-border rounded-2xl p-8 shadow-2xl text-center space-y-4">
-        <div class="w-12 h-12 mx-auto rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center text-xl">
-          <i class="fa-solid fa-key"></i>
+        <div class="w-12 h-12 mx-auto rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl">
+          <i class="fa-solid fa-triangle-exclamation"></i>
         </div>
-        <h2 class="text-lg font-bold text-white">Recuperar Contraseña</h2>
-        <p class="text-xs text-slate-400">Ingresa tu correo institucional registrado para recibir el enlace seguro de restablecimiento de Amazon Cognito.</p>
-        <form onsubmit="handleRecuperarSubmit(event)" class="space-y-4 text-left">
-          <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Correo Electrónico</label>
-            <input type="email" id="recuperar-email" required placeholder="tu-correo@empresa.com" class="w-full px-3.5 py-2.5 bg-aura-input border border-aura-border rounded-lg text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500">
-          </div>
-          <button type="submit" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg text-sm shadow">
-            Enviar Enlace de Recuperación
-          </button>
-        </form>
-        <button onclick="navigateTo('login')" class="text-xs text-slate-400 hover:text-slate-200">
-          ← Volver al Login
+        <h2 class="text-lg font-bold text-white">Recuperación de Contraseña no Disponible</h2>
+        <p class="text-xs text-slate-300">
+          El autoservicio de recuperación de contraseña no se encuentra habilitado en el entorno actual de Amazon Cognito.
+        </p>
+        <div class="p-3.5 bg-slate-900/60 rounded-xl border border-aura-border text-left text-xs text-slate-400 space-y-1">
+          <p class="text-[11px] text-slate-300">
+            Para restablecer tu acceso o solicitar una nueva clave, por favor contacta directamente al <strong class="text-white">Administrador de Cuentas</strong> o al departamento de soporte técnico.
+          </p>
+        </div>
+        <button onclick="navigateTo('login')" class="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg text-xs shadow transition-all">
+          ← Volver a la Pantalla de Ingreso
         </button>
       </div>
     </div>
@@ -473,7 +502,7 @@ function renderSidebar() {
       { id: 'solicitudes', label: 'Mis Solicitudes', icon: 'fa-table-columns', allowed: true }
     ];
   } else if (isGerente) {
-    const pendientesGerente = state.solicitudes.filter(s => s.estado === 'en_revision' && !s.esAltoMonto).length;
+    const pendientesGerente = state.aprobacionesState.totalApi || state.aprobaciones.length || state.solicitudes.filter(s => (s.status === 'PENDING' || s.estado === 'en_revision') && !s.esAltoMonto && !s.isLegacyOrReadOnly).length;
     navItems = [
       { id: 'dashboard', label: 'Dashboard', icon: 'fa-chart-pie', allowed: true },
       { id: 'solicitudes', label: 'Solicitudes', icon: 'fa-table-columns', allowed: true },
@@ -481,7 +510,7 @@ function renderSidebar() {
       { id: 'proveedores', label: 'Catálogo Proveedores', icon: 'fa-building', allowed: true }
     ];
   } else if (isDirector) {
-    const pendientesDirector = state.solicitudes.filter(s => s.estado === 'en_revision' && s.esAltoMonto).length;
+    const pendientesDirector = state.aprobacionesState.totalApi || state.aprobaciones.length || state.solicitudes.filter(s => (s.status === 'PENDING' || s.estado === 'en_revision') && s.esAltoMonto && !s.isLegacyOrReadOnly).length;
     navItems = [
       { id: 'dashboard', label: 'Dashboard', icon: 'fa-chart-pie', allowed: true },
       { id: 'solicitudes', label: 'Solicitudes', icon: 'fa-table-columns', allowed: true },
@@ -593,7 +622,7 @@ function renderTopNav() {
       </div>
 
       <div class="flex items-center gap-3">
-        <button onclick="${Boolean(state.currentUser && state.currentUser.isAdmin) ? 'recargarAdminUsuariosApi()' : 'recargarSolicitudesApi()'}" title="Sincronizar con AWS" class="p-2 text-slate-400 hover:text-white hover:bg-slate-800/60 rounded-lg text-xs border border-aura-border transition-colors ${state.apiState.isLoading ? 'animate-spin text-blue-400' : ''}">
+        <button onclick="${Boolean(state.currentUser && state.currentUser.isAdmin) ? 'recargarAdminUsuariosApi()' : (state.currentView === 'aprobaciones' ? 'recargarAprobacionesApi()' : 'recargarSolicitudesApi()')}" title="Sincronizar con AWS" class="p-2 text-slate-400 hover:text-white hover:bg-slate-800/60 rounded-lg text-xs border border-aura-border transition-colors ${state.apiState.isLoading || (state.aprobacionesState && state.aprobacionesState.isLoading) ? 'animate-spin text-blue-400' : ''}">
           <i class="fa-solid fa-rotate"></i>
         </button>
 
@@ -806,6 +835,7 @@ function renderKanban() {
     items = items.filter(s => s.estado !== 'borrador');
   }
 
+  const hasLegacy = items.some(s => s.estado === 'legado' || s.isLegacyOrReadOnly);
   const columns = [
     {
       id: 'pendiente',
@@ -819,23 +849,33 @@ function renderKanban() {
       title: 'En Revisión (Dictamen)',
       borderColor: 'border-amber-500/40',
       badgeColor: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
-      filter: (s) => s.estado === 'en_revision'
+      filter: (s) => (s.status === 'PENDING' || s.status === 'REGISTERING' || (!s.status && s.estado === 'en_revision')) && !s.isLegacyOrReadOnly && s.estado !== 'legado'
     },
     {
       id: 'aprobado',
       title: 'Aprobadas',
       borderColor: 'border-emerald-500/40',
       badgeColor: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
-      filter: (s) => s.estado === 'aprobado'
+      filter: (s) => (s.status === 'APPROVED' || s.estado === 'aprobado') && !s.isLegacyOrReadOnly
     },
     {
       id: 'rechazado',
       title: 'Rechazadas / Anuladas',
       borderColor: 'border-red-500/40',
       badgeColor: 'bg-red-500/20 text-red-300 border border-red-500/30',
-      filter: (s) => s.estado === 'rechazado' || s.estado === 'anulado'
+      filter: (s) => (s.status === 'REJECTED' || s.status === 'CANCELLED' || s.estado === 'rechazado' || s.estado === 'anulado') && !s.isLegacyOrReadOnly
     }
   ];
+
+  if (hasLegacy) {
+    columns.push({
+      id: 'legado',
+      title: 'Histórico (Solo Lectura)',
+      borderColor: 'border-slate-600/60',
+      badgeColor: 'bg-slate-800 text-slate-400 border border-slate-700',
+      filter: (s) => s.estado === 'legado' || s.isLegacyOrReadOnly
+    });
+  }
 
   return `
     <div class="h-full flex flex-col space-y-3">
@@ -856,7 +896,7 @@ function renderKanban() {
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
+      <div class="grid grid-cols-1 ${hasLegacy ? 'md:grid-cols-5' : 'md:grid-cols-4'} gap-4 flex-1">
         ${columns.map(col => {
           const colItems = items.filter(col.filter);
           return `
@@ -1066,20 +1106,22 @@ function renderNuevaSolicitud() {
   `;
 }
 
-// 4. BANDEJA DE APROBACIONES (Gerente ≤ $1,000, Director > $1,000)
+// 4. BANDEJA DE APROBACIONES (Gerente ≤ $1,000, Director > $1,000 — GET /api/aprobaciones)
 function renderAprobaciones() {
   const isGerente = state.currentRole === 'gerente';
   const isDirector = state.currentRole === 'director';
 
-  // Matriz de aprobaciones:
+  // Matriz de aprobaciones oficial desde GET /api/aprobaciones con paginación
   // Director: exclusivamente solicitudes de alto monto (> $1,000)
   // Gerente: exclusivamente solicitudes ordinarias (≤ $1,000)
   // Compras: NO dictamina
   let pendientes = [];
-  if (isDirector) {
-    pendientes = state.solicitudes.filter(s => s.estado === 'en_revision' && s.esAltoMonto);
+  if (state.aprobaciones && state.aprobaciones.length > 0) {
+    pendientes = state.aprobaciones;
+  } else if (isDirector) {
+    pendientes = state.solicitudes.filter(s => (s.status === 'PENDING' || s.estado === 'en_revision') && s.esAltoMonto && !s.isLegacyOrReadOnly);
   } else if (isGerente) {
-    pendientes = state.solicitudes.filter(s => s.estado === 'en_revision' && !s.esAltoMonto);
+    pendientes = state.solicitudes.filter(s => (s.status === 'PENDING' || s.estado === 'en_revision') && !s.esAltoMonto && !s.isLegacyOrReadOnly);
   }
 
   return `
@@ -1091,9 +1133,21 @@ function renderAprobaciones() {
           </h3>
           <p class="text-xs text-slate-400">
             ${isDirector 
-              ? 'Dictamen exclusivo de fiscalización directiva para adquisiciones de alto presupuesto.' 
-              : 'Revisión y dictamen de solicitudes departamentales ordinarias.'}
+              ? 'Dictamen exclusivo de fiscalización directiva para adquisiciones de alto presupuesto (GET /api/aprobaciones).' 
+              : 'Revisión y dictamen de solicitudes departamentales ordinarias (GET /api/aprobaciones).'}
           </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-slate-400">Mostrando <strong class="text-white">${pendientes.length}</strong> pendientes</span>
+          ${state.aprobacionesState.hayMasRegistros ? `
+            <button onclick="cargarSiguientePaginaAprobaciones()" class="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow transition-all flex items-center gap-1.5">
+              <span>Cargar más</span>
+              <i class="fa-solid fa-arrow-down text-[10px]"></i>
+            </button>
+          ` : ''}
+          <button onclick="recargarAprobacionesApi()" class="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs border border-aura-border" title="Actualizar bandeja">
+            <i class="fa-solid fa-rotate ${state.aprobacionesState.isLoading ? 'fa-spin' : ''}"></i>
+          </button>
         </div>
       </div>
 
@@ -1132,11 +1186,11 @@ function renderAprobaciones() {
                   </td>
                   <td class="py-3.5 px-4 text-center">
                     <div class="flex items-center justify-center gap-2">
-                      <button onclick="dictaminarSolicitud('${s.id}', 'aprobado')" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[11px] shadow-sm transition-all flex items-center gap-1.5">
+                      <button onclick="dictaminarSolicitud('${s.id}', 'aprobado')" ${state.inFlightOperations?.has(`dictamen_${s.id}`) ? 'disabled' : ''} class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold text-[11px] shadow-sm transition-all flex items-center gap-1.5">
                         <i class="fa-solid fa-check text-[10px]"></i>
                         <span>Aprobar</span>
                       </button>
-                      <button onclick="dictaminarSolicitud('${s.id}', 'rechazado')" class="px-3 py-1.5 rounded-lg bg-red-600/80 hover:bg-red-600 text-white font-semibold text-[11px] shadow-sm transition-all flex items-center gap-1.5">
+                      <button onclick="dictaminarSolicitud('${s.id}', 'rechazado')" ${state.inFlightOperations?.has(`dictamen_${s.id}`) ? 'disabled' : ''} class="px-3 py-1.5 rounded-lg bg-red-600/80 hover:bg-red-600 disabled:opacity-50 text-white font-semibold text-[11px] shadow-sm transition-all flex items-center gap-1.5">
                         <i class="fa-solid fa-xmark text-[10px]"></i>
                         <span>Rechazar</span>
                       </button>
@@ -1252,11 +1306,11 @@ function renderProveedores() {
 
 // 6. FICHA TÉCNICA DETALLE SOLICITUD
 function renderDetalleSolicitud() {
-  const item = state.solicitudes.find(s => s.id === state.selectedSolicitudId);
+  const item = state.solicitudes.find(s => s.id === state.selectedSolicitudId || s.requestId === state.selectedSolicitudId || (s.draftId && s.draftId === state.selectedSolicitudId));
   const isSolicitante = state.currentRole === 'solicitante';
   const isGerente = state.currentRole === 'gerente';
   const isDirector = state.currentRole === 'director';
-  const canDictaminar = (isGerente && !item?.esAltoMonto) || (isDirector && item?.esAltoMonto);
+  const canDictaminar = ((isGerente && !item?.esAltoMonto) || (isDirector && item?.esAltoMonto)) && (item?.status === 'PENDING' || (!item?.status && item?.estado === 'en_revision')) && !item?.isLegacyOrReadOnly;
 
   if (!item) {
     return `
@@ -1443,6 +1497,20 @@ function renderDetalleSolicitud() {
               </button>
             </div>
           </div>
+        ` : item.isLegacyOrReadOnly ? `
+          <div class="p-4 rounded-xl border bg-slate-800/80 border-slate-600 text-slate-300 flex items-start gap-3">
+            <div class="w-6 h-6 rounded-full bg-slate-700 border border-slate-500 flex items-center justify-center shrink-0 mt-0.5">
+              <i class="fa-solid fa-lock text-slate-400 text-xs"></i>
+            </div>
+            <div>
+              <span class="text-xs font-bold text-white block">
+                Registro Histórico / Estado Legado (${item.status || item.rawStatus || 'LEGACY'})
+              </span>
+              <span class="text-[11px] text-slate-400 mt-0.5 block">
+                Este requerimiento corresponde a un flujo anterior incompatible con el dictamen actual. Se conserva en modo de solo lectura según las políticas de auditoría.
+              </span>
+            </div>
+          </div>
         ` : `
           <div class="p-3.5 rounded-xl border flex items-center gap-3 ${
             item.esAltoMonto 
@@ -1458,7 +1526,7 @@ function renderDetalleSolicitud() {
           </div>
         `}
 
-        ${isSolicitante && item.estado === 'en_revision' ? `
+        ${isSolicitante && (item.status === 'PENDING' || (!item.status && item.estado === 'en_revision')) && !item.isLegacyOrReadOnly ? `
           <div class="pt-4 border-t border-aura-border flex items-center justify-between">
             <button onclick="anularSolicitud('${item.id}')" class="px-3.5 py-2 rounded-lg bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/40 text-xs font-semibold transition-all flex items-center gap-2">
               <i class="fa-solid fa-ban text-xs"></i>
@@ -1468,12 +1536,12 @@ function renderDetalleSolicitud() {
           </div>
         ` : ''}
 
-        ${canDictaminar && item.estado === 'en_revision' ? `
+        ${canDictaminar && (item.status === 'PENDING' || (!item.status && item.estado === 'en_revision')) ? `
           <div class="pt-4 border-t border-aura-border flex items-center justify-end gap-3">
-            <button onclick="dictaminarSolicitud('${item.id}', 'rechazado')" class="px-4 py-2 rounded-lg bg-red-600/80 hover:bg-red-600 text-xs font-semibold text-white shadow transition-all">
+            <button onclick="dictaminarSolicitud('${item.id}', 'rechazado')" ${state.inFlightOperations?.has(`dictamen_${item.id}`) ? 'disabled' : ''} class="px-4 py-2 rounded-lg bg-red-600/80 hover:bg-red-600 disabled:opacity-50 text-xs font-semibold text-white shadow transition-all">
               Rechazar Solicitud
             </button>
-            <button onclick="dictaminarSolicitud('${item.id}', 'aprobado')" class="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white shadow-lg shadow-emerald-600/30 transition-all">
+            <button onclick="dictaminarSolicitud('${item.id}', 'aprobado')" ${state.inFlightOperations?.has(`dictamen_${item.id}`) ? 'disabled' : ''} class="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-xs font-semibold text-white shadow-lg shadow-emerald-600/30 transition-all">
               Aprobar Requerimiento
             </button>
           </div>
@@ -1638,9 +1706,15 @@ function renderColorSwatch(hex, name, token) {
 // ----------------- HELPERS VISUALES -----------------
 function renderBadgeEstado(estado) {
   switch (estado ? estado.toLowerCase() : '') {
+    case 'registrando':
     case 'registering':
       return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-purple-500/15 text-purple-300 border border-purple-500/30">
         <span class="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse"></span>Registrando (HTTP 202)</span>`;
+    case 'legado':
+    case 'requires_supervisor':
+    case 'requires_manager':
+      return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-700/60 text-slate-300 border border-slate-600">
+        <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Solo Lectura (Legado)</span>`;
     case 'anulado':
       return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-700/60 text-slate-300 border border-slate-600">
         <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Anulado (CANCELLED)</span>`;
@@ -1784,6 +1858,9 @@ function renderModal() {
 
 // ----------------- TOASTS Y MODALES -----------------
 function showToast(message, type = 'info') {
+  if (typeof window.showToast === 'function' && window.showToast !== showToast) {
+    return window.showToast(message, type);
+  }
   const container = document.getElementById('toast-container') || (() => {
     const c = document.createElement('div');
     c.id = 'toast-container';
@@ -1809,6 +1886,7 @@ function showToast(message, type = 'info') {
     setTimeout(() => toast.remove(), 300);
   }, 3500);
 }
+window.showToast = showToast;
 
 window.cerrarErrorModal = function() {
   state.globalErrorModal = null;
@@ -1852,6 +1930,12 @@ function navigateTo(view) {
 
   state.currentView = view;
   render();
+
+  if (view === 'aprobaciones' && (state.currentRole === 'gerente' || state.currentRole === 'director')) {
+    if (typeof window.recargarAprobacionesApi === 'function') {
+      window.recargarAprobacionesApi();
+    }
+  }
 }
 window.navigateTo = navigateTo;
 
@@ -1902,6 +1986,9 @@ window.handleLoginFormSubmit = async function(e) {
       if (typeof window.recargarBorradoresApi === 'function' && authUser.role === 'solicitante') {
         window.recargarBorradoresApi();
       }
+      if (typeof window.recargarAprobacionesApi === 'function' && (authUser.role === 'gerente' || authUser.role === 'director')) {
+        window.recargarAprobacionesApi();
+      }
     }
   } catch (err) {
     console.error('[AURA Auth Error]', err);
@@ -1921,10 +2008,8 @@ window.handleLoginFormSubmit = async function(e) {
 };
 
 window.handleRecuperarSubmit = function(e) {
-  e.preventDefault();
-  const email = document.getElementById('recuperar-email').value.trim();
-  showToast(`Enlace de restablecimiento enviado a ${email} vía Amazon Cognito.`, 'info');
-  navigateTo('login');
+  if (e && typeof e.preventDefault === 'function') e.preventDefault();
+  showToast('Operación no disponible: El autoservicio de recuperación no está configurado en Cognito. Contacta al Administrador de Cuentas.', 'warning');
 };
 
 window.handleLogout = async function() {
@@ -1958,21 +2043,49 @@ window.normalizarSolicitudDesdeApi = function(raw) {
   if (!raw) return null;
   const requestId = raw.requestId || raw.id || `REQ-${Date.now()}`;
   const amount = Number(raw.amount !== undefined ? raw.amount : (raw.monto !== undefined ? raw.monto : (raw.total || 0)));
-  const statusRaw = String(raw.status || raw.estado || 'en_revision').toLowerCase();
+  const rawStatus = raw.status !== undefined ? raw.status : (raw.estado !== undefined ? raw.estado : '');
+  const statusUpper = String(rawStatus || '').trim().toUpperCase();
 
-  let estadoNormalizado = 'en_revision';
-  if (statusRaw.includes('pending') || statusRaw.includes('revision') || statusRaw.includes('review') || statusRaw.includes('submitted')) {
-    estadoNormalizado = 'en_revision';
-  } else if (statusRaw.includes('reject') || statusRaw.includes('rechaz')) {
-    estadoNormalizado = 'rechazado';
-  } else if (statusRaw.includes('cancel') || statusRaw.includes('anul')) {
-    estadoNormalizado = 'anulado';
-  } else if (statusRaw.includes('draft') || statusRaw.includes('borrador')) {
-    estadoNormalizado = 'borrador';
-  } else if (statusRaw.includes('approv') || statusRaw.includes('aprob')) {
-    estadoNormalizado = 'aprobado';
-  } else {
-    estadoNormalizado = 'en_revision';
+  // Mapeo explícito de contratos backend y aislamiento estricto de estados legados
+  let estadoNormalizado = 'legado';
+  let isLegacyOrReadOnly = false;
+
+  switch (statusUpper) {
+    case 'PENDING':
+    case 'PENDING_APPROVAL':
+      estadoNormalizado = 'en_revision';
+      break;
+    case 'APPROVED':
+      estadoNormalizado = 'aprobado';
+      break;
+    case 'REJECTED':
+      estadoNormalizado = 'rechazado';
+      break;
+    case 'CANCELLED':
+      estadoNormalizado = 'anulado';
+      break;
+    case 'DRAFT':
+      estadoNormalizado = 'borrador';
+      break;
+    case 'REGISTERING':
+    case 'SUBMITTED':
+      estadoNormalizado = 'registrando';
+      break;
+    case 'REQUIRES_SUPERVISOR':
+    case 'REQUIRES_MANAGER':
+      estadoNormalizado = 'legado';
+      isLegacyOrReadOnly = true;
+      break;
+    default:
+      if (!rawStatus) {
+        // Fallback default si viene completamente vacío en pruebas iniciales
+        estadoNormalizado = 'en_revision';
+      } else {
+        // Cualquier estado desconocido o no homologado se conserva en modo legado/solo lectura
+        estadoNormalizado = 'legado';
+        isLegacyOrReadOnly = true;
+      }
+      break;
   }
 
   let fechaFormateada = 'Hoy';
@@ -2021,6 +2134,10 @@ window.normalizarSolicitudDesdeApi = function(raw) {
   return {
     id: requestId,
     requestId: requestId,
+    draftId: raw.draftId || (raw.id && (String(raw.id).startsWith('DRAFT-') || String(raw.id).startsWith('BR-') || String(raw.id).startsWith('d-')) ? raw.id : null),
+    status: raw.status || rawStatus || (estadoNormalizado === 'en_revision' ? 'PENDING' : statusUpper),
+    rawStatus: statusUpper,
+    isLegacyOrReadOnly: isLegacyOrReadOnly,
     descripcion: raw.description || raw.descripcion || 'Sin descripción especificada',
     solicitante: raw.applicant || raw.solicitante || 'usuario@empresa.com',
     applicantSub: raw.applicantSub || raw.sub || null,
@@ -2084,16 +2201,61 @@ window.recargarSolicitudesApi = async function(cursor = null) {
   }
 };
 
+// ----------------- INTEGRACIÓN BANDEJA OFICIAL DE APROBACIONES (GET /api/aprobaciones) -----------------
+window.cargarSiguientePaginaAprobaciones = async function() {
+  if (!state.aprobacionesState.cursor) return;
+  await window.recargarAprobacionesApi(state.aprobacionesState.cursor);
+};
+
+window.recargarAprobacionesApi = async function(cursor = null) {
+  if (!window.apiService) return;
+  if (state.currentRole !== 'gerente' && state.currentRole !== 'director') return;
+  state.aprobacionesState.isLoading = true;
+  render();
+
+  try {
+    const data = await window.apiService.getAprobaciones(20, cursor);
+    if (data && Array.isArray(data.solicitudes)) {
+      const normalizadas = data.solicitudes.map(s => window.normalizarSolicitudDesdeApi(s)).filter(Boolean);
+
+      if (cursor) {
+        const idsExistentes = new Set(state.aprobaciones.map(x => x.id));
+        const unicas = normalizadas.filter(x => !idsExistentes.has(x.id));
+        state.aprobaciones = [...state.aprobaciones, ...unicas];
+      } else {
+        state.aprobaciones = normalizadas;
+      }
+
+      state.aprobacionesState.cursor = data.siguienteCursor || null;
+      // Una página sin resultados puede tener cursor siguiente: no detener solo porque venga vacía
+      state.aprobacionesState.hayMasRegistros = Boolean(data.hayMasRegistros || data.siguienteCursor);
+      state.aprobacionesState.totalApi = data.total || state.aprobaciones.length;
+      state.aprobacionesState.isConnected = true;
+    }
+  } catch (err) {
+    console.warn('[AURA] Error al sincronizar bandeja de aprobaciones:', err.message);
+    state.aprobacionesState.isConnected = false;
+  } finally {
+    state.aprobacionesState.isLoading = false;
+    render();
+  }
+};
+
 window.verDetalleSolicitud = async function(id) {
   state.selectedSolicitudId = id;
   state.currentView = 'detalle_solicitud';
   render();
 
   if (window.apiService && id) {
-    const sLocal = state.solicitudes.find(x => x.id === id);
+    let sLocal = state.solicitudes.find(x => x.id === id || x.requestId === id || (x.draftId && x.draftId === id));
+    if (sLocal && sLocal.id && sLocal.id !== id && (id.startsWith('DRAFT-') || id.startsWith('BR-') || id.startsWith('d-') || sLocal.draftId === id)) {
+      state.selectedSolicitudId = sLocal.id;
+      id = sLocal.id;
+    }
+
     const esBorrador = (sLocal && sLocal.estado === 'borrador') ||
                        (state.borradoresRemotos && state.borradoresRemotos.some(b => (b.id || b.draftId) === id)) ||
-                       id.startsWith('DRAFT-') || id.startsWith('BR-');
+                       id.startsWith('DRAFT-') || id.startsWith('BR-') || id.startsWith('d-');
 
     // Apertura de borradores mediante /api/borradores/:id
     if (esBorrador) {
@@ -2137,8 +2299,26 @@ window.verDetalleSolicitud = async function(id) {
       }
     } catch (err) {
       if (err.status === 404) {
+        // Verificar si la solicitud está en proceso de registro asíncrono en Step Functions
+        if (sLocal && (sLocal.status === 'REGISTERING' || sLocal.estado === 'registrando')) {
+          try {
+            const reg = await window.apiService.getSolicitudRegistro(id);
+            if (reg && (reg.estado === 'REGISTERING' || reg.estado === 'PERSISTED')) {
+              const doc = reg.solicitud || reg.documento;
+              if (doc) {
+                const normalizado = window.normalizarSolicitudDesdeApi(doc);
+                const idx = state.solicitudes.findIndex(x => x.id === id || x.requestId === id);
+                if (idx !== -1) state.solicitudes[idx] = { ...state.solicitudes[idx], ...normalizado };
+                else state.solicitudes.push(normalizado);
+              }
+              render();
+              return;
+            }
+          } catch {}
+        }
+
         // Fallback: Si el id corresponde a un borrador, intentar consultar /api/borradores/:id
-        if (id.startsWith('DRAFT-') || id.startsWith('BR-')) {
+        if (id.startsWith('DRAFT-') || id.startsWith('BR-') || id.startsWith('d-')) {
           try {
             const detalleBorrador = await window.apiService.getBorradorById(id);
             if (detalleBorrador) {
@@ -2168,25 +2348,51 @@ window.verDetalleSolicitud = async function(id) {
 };
 
 window.dictaminarSolicitud = async function(id, resultado, comentarioUsuario = null) {
+  const lockKey = `dictamen_${id}`;
+  if (state.inFlightOperations && state.inFlightOperations.has(lockKey)) {
+    return;
+  }
+  if (state.inFlightOperations) {
+    state.inFlightOperations.add(lockKey);
+  }
+
   if (state.currentRole === 'solicitante') {
     showToast('Acceso Denegado: Un solicitante no tiene permisos de dictamen.', 'warning');
+    if (state.inFlightOperations) state.inFlightOperations.delete(lockKey);
     return;
   }
   if (state.currentRole === 'compras') {
     showToast('Acceso Denegado: Compras no tiene permisos de dictamen según la matriz de roles.', 'warning');
+    if (state.inFlightOperations) state.inFlightOperations.delete(lockKey);
     return;
   }
 
   const s = state.solicitudes.find(x => x.id === id);
-  if (!s) return;
+  if (!s) {
+    if (state.inFlightOperations) state.inFlightOperations.delete(lockKey);
+    return;
+  }
+
+  // Validación estricta de estado: Solo PENDING admite dictamen en el flujo oficial
+  const statusMayus = String(s.status || s.rawStatus || '').toUpperCase();
+  const esLegado = ['REQUIRES_SUPERVISOR', 'REQUIRES_MANAGER'].includes(statusMayus) || s.isLegacyOrReadOnly || s.estado === 'legado';
+  const esFinal = ['APPROVED', 'REJECTED', 'CANCELLED', 'REGISTERING', 'SUBMITTED', 'DRAFT'].includes(statusMayus) || s.estado === 'aprobado' || s.estado === 'rechazado' || s.estado === 'anulado' || s.estado === 'borrador';
+
+  if (esLegado || esFinal || (statusMayus && statusMayus !== 'PENDING' && statusMayus !== 'PENDING_APPROVAL')) {
+    showToast('El estado de la solicitud no admite dictamen en el flujo actual. Actualiza el listado o solicita la revisión del registro.', 'warning');
+    if (state.inFlightOperations) state.inFlightOperations.delete(lockKey);
+    return;
+  }
 
   // Validación de monto: Gerente hasta $1,000; Director más de $1,000
   if (state.currentRole === 'gerente' && s.esAltoMonto) {
     showToast('Acceso Denegado: Solicitudes de alto monto (> $1,000 USD) corresponden a Dirección General.', 'warning');
+    if (state.inFlightOperations) state.inFlightOperations.delete(lockKey);
     return;
   }
   if (state.currentRole === 'director' && !s.esAltoMonto) {
     showToast('Acceso Denegado: Solicitudes ordinarias (≤ $1,000 USD) corresponden a Gerencia.', 'warning');
+    if (state.inFlightOperations) state.inFlightOperations.delete(lockKey);
     return;
   }
 
@@ -2207,14 +2413,15 @@ window.dictaminarSolicitud = async function(id, resultado, comentarioUsuario = n
     }
     if (!comentarioFinal || !comentarioFinal.trim()) {
       showToast('El comentario es obligatorio tanto al aprobar como al rechazar.', 'warning');
+      if (state.inFlightOperations) state.inFlightOperations.delete(lockKey);
       return;
     }
   }
 
   const currentUser = (state.currentUser && state.currentUser.name) || (state.users && state.users[state.currentRole] ? state.users[state.currentRole].name : 'Ing. Herberth');
 
-  if (window.apiService && id) {
-    try {
+  try {
+    if (window.apiService && id) {
       await window.apiService.dictaminarSolicitud(id, {
         decision: decisionAws,
         comentarios: comentarioFinal.trim(),
@@ -2223,20 +2430,41 @@ window.dictaminarSolicitud = async function(id, resultado, comentarioUsuario = n
         decidedBy: currentUser
       });
       showToast(`Solicitud ${id} ${resultado.toUpperCase()} y registrada en AWS DynamoDB.`, resultado === 'aprobado' ? 'success' : 'warning');
-    } catch (err) {
-      console.warn(`[AURA] Falla al persistir dictamen en backend/AWS:`, err.message);
-      showToast(`Error al registrar dictamen en AWS: ${err.message}`, 'error');
-      return;
+      s.estado = resultado;
+      s.status = decisionAws;
+      s.fechaDictamen = 'Hoy';
+      s.aprobador = currentUser;
+      s.comentariosGerente = comentarioFinal.trim();
     }
+  } catch (err) {
+    console.warn(`[AURA] Falla al persistir dictamen en backend/AWS:`, err.message);
+    if (err.status === 409) {
+      showToast(`Conflicto (HTTP 409): ${err.message}`, 'warning');
+    } else {
+      showToast(`Error al registrar dictamen en AWS: ${err.message}`, 'error');
+    }
+  } finally {
+    // Tras éxito o conflicto 409, refrescar registro remoto, bandeja de aprobaciones y retirar acciones
+    if (window.apiService && id) {
+      try {
+        const fresh = await window.apiService.getSolicitudById(id);
+        if (fresh && fresh.solicitud) {
+          const norm = window.normalizarSolicitudDesdeApi(fresh.solicitud);
+          Object.assign(s, norm);
+        }
+      } catch {}
+    }
+    if (typeof window.recargarAprobacionesApi === 'function') {
+      await window.recargarAprobacionesApi();
+    }
+    if (typeof window.recargarSolicitudesApi === 'function') {
+      await window.recargarSolicitudesApi();
+    }
+    if (state.inFlightOperations) {
+      state.inFlightOperations.delete(lockKey);
+    }
+    render();
   }
-
-  s.estado = resultado;
-  s.status = decisionAws;
-  s.fechaDictamen = 'Hoy';
-  s.aprobador = currentUser;
-  s.comentariosGerente = comentarioFinal.trim();
-
-  render();
 };
 
 window.generarSiguienteIdLocal = function() {
@@ -2654,9 +2882,18 @@ window.eliminarBorrador = async function(id, version) {
 };
 
 window.enviarBorradorAFirma = async function(id) {
-  const s = state.solicitudes.find(x => x.id === id);
+  const lockKey = `enviar_${id}`;
+  if (state.inFlightOperations && state.inFlightOperations.has(lockKey)) {
+    return;
+  }
+  if (state.inFlightOperations) {
+    state.inFlightOperations.add(lockKey);
+  }
+
+  const s = state.solicitudes.find(x => x.id === id || x.draftId === id);
   if (!s) {
     showToast('Borrador no encontrado.', 'warning');
+    if (state.inFlightOperations) state.inFlightOperations.delete(lockKey);
     return;
   }
 
@@ -2664,6 +2901,7 @@ window.enviarBorradorAFirma = async function(id) {
 
   if (!window.apiService) {
     showToast('Servicio API no disponible.', 'error');
+    if (state.inFlightOperations) state.inFlightOperations.delete(lockKey);
     return;
   }
 
@@ -2672,27 +2910,39 @@ window.enviarBorradorAFirma = async function(id) {
     const res = await window.apiService.enviarBorrador(id, version);
     const reqId = (res && (res.requestId || res.id)) || id;
 
+    // Conservar draftId original separado del nuevo requestId
+    s.draftId = id;
     s.id = reqId;
     s.requestId = reqId;
-    s.estado = 'en_revision';
-    s.status = 'PENDING_APPROVAL';
+    s.estado = 'registrando';
+    s.status = 'REGISTERING';
     s.fecha = 'Hoy';
     s.executionArn = (res && res.executionArn) || '';
+
+    // Sincronizar selección activa para evitar falso 404 en el detalle
+    if (state.selectedSolicitudId === id) {
+      state.selectedSolicitudId = reqId;
+    }
 
     showToast(`Borrador enviado a AWS Step Functions (${reqId}, HTTP 202). Registrando...`, 'success');
     render();
 
     // Iniciar consulta de persistencia /api/solicitudes/:id/registro hasta PERSISTED/FAILED
-    window.verificarPersistenciaRegistro(reqId);
+    window.verificarPersistenciaRegistro(reqId, id);
   } catch (err) {
     console.error('[AURA Enviar Borrador Error]:', err);
     // Conservar borrador y versión para permitir reintento de la misma operación
     showToast('Error al enviar borrador a revisión: ' + err.message, 'warning');
+  } finally {
+    if (state.inFlightOperations) {
+      state.inFlightOperations.delete(lockKey);
+    }
+    render();
   }
 };
 
 // ----------------- POLLING DE PERSISTENCIA HTTP 202 (REGISTERING) -----------------
-window.verificarPersistenciaRegistro = async function(requestId, maxAttempts = 8, intervalMs = 1500) {
+window.verificarPersistenciaRegistro = async function(requestId, originalDraftId = null, maxAttempts = 10, intervalMs = 1500) {
   if (!window.apiService || !requestId) return { success: false, estado: 'UNKNOWN' };
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -2701,13 +2951,45 @@ window.verificarPersistenciaRegistro = async function(requestId, maxAttempts = 8
       const estado = res && (res.estado || res.status);
       if (estado === 'PERSISTED') {
         showToast(`Solicitud ${requestId} persistida y registrada exitosamente en DynamoDB.`, 'success');
+
+        // Actualizar el objeto localmente sin falso 404 conservando draftId
+        const target = state.solicitudes.find(x => x.id === requestId || x.requestId === requestId || (originalDraftId && x.draftId === originalDraftId));
+        if (target) {
+          const preservedDraftId = target.draftId || originalDraftId;
+          target.status = 'PENDING';
+          target.estado = 'en_revision';
+          if (res.solicitud) {
+            const fresh = window.normalizarSolicitudDesdeApi(res.solicitud);
+            Object.assign(target, fresh);
+            target.id = requestId;
+            target.requestId = requestId;
+            if (preservedDraftId) {
+              target.draftId = preservedDraftId;
+            }
+          }
+        }
+
+        // Mantener selección en el requestId nuevo
+        if (state.selectedSolicitudId === originalDraftId || state.selectedSolicitudId === requestId) {
+          state.selectedSolicitudId = requestId;
+        }
+
         if (typeof window.recargarSolicitudesApi === 'function') {
           await window.recargarSolicitudesApi();
+        }
+        if (state.currentView === 'detalle_solicitud') {
+          render();
         }
         return { success: true, estado: 'PERSISTED' };
       }
       if (estado === 'FAILED') {
         showToast(`Falla en la persistencia de solicitud ${requestId} en DynamoDB.`, 'error');
+        const target = state.solicitudes.find(x => x.id === requestId || x.requestId === requestId || (originalDraftId && x.draftId === originalDraftId));
+        if (target) {
+          target.status = 'FAILED';
+          target.estado = 'rechazado';
+        }
+        render();
         return { success: false, estado: 'FAILED' };
       }
     } catch (err) {
@@ -3245,6 +3527,15 @@ window.ejecutarDecidirUsuarioAdmin = async function(sub, payload) {
 // ----------------- CONTROLADORES: ANULACIÓN DE SOLICITUDES -----------------
 window.anularSolicitud = async function(id) {
   if (!id) return;
+  const s = state.solicitudes.find(x => x.id === id);
+  if (s) {
+    const statusMayus = String(s.status || s.rawStatus || '').toUpperCase();
+    if (statusMayus && statusMayus !== 'PENDING' && statusMayus !== 'PENDING_APPROVAL') {
+      showToast('Solo se puede anular una solicitud pendiente (PENDING).', 'warning');
+      return;
+    }
+  }
+
   const comentarios = typeof prompt === 'function' ? prompt('Ingresa el motivo obligatorio para anular esta solicitud:') : 'Anulada por solicitante';
   if (!comentarios || !comentarios.trim()) {
     showToast('El motivo de anulación es obligatorio.', 'warning');
@@ -3377,7 +3668,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           await Promise.allSettled([
             window.recargarSolicitudesApi(),
             window.recargarProveedoresApi(),
-            me.role === 'solicitante' ? window.recargarBorradoresApi() : Promise.resolve()
+            me.role === 'solicitante' ? window.recargarBorradoresApi() : Promise.resolve(),
+            (me.role === 'gerente' || me.role === 'director') ? window.recargarAprobacionesApi() : Promise.resolve()
           ]);
         }
       }
