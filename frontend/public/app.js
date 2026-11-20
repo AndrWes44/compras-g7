@@ -239,13 +239,6 @@ function renderLogin() {
             </button>
           </p>
         </div>
-
-        <div class="mt-6 pt-4 border-t border-aura-border/60 text-center">
-          <button onclick="navigateTo('tokens')" class="text-xs text-slate-400 hover:text-slate-200 transition-colors inline-flex items-center gap-1.5">
-            <i class="fa-solid fa-palette text-blue-400"></i>
-            <span>Ver Guía Visual & Tokens de Diseño (Figma)</span>
-          </button>
-        </div>
       </div>
     </div>
   `;
