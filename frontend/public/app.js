@@ -2518,8 +2518,27 @@ window.actualizarItem = function(idx, campo, valor) {
   const it = state.nuevaSolicitudForm.items[idx];
   if (!it) return;
 
-  if (campo === 'cantidad' || campo === 'precio') {
-    it[campo] = Number(valor);
+  if (campo === 'precio') {
+    // Evitar que el usuario ingrese más de 2 decimales (.00) en tiempo real
+    if (typeof valor === 'string' && valor.includes('.')) {
+      const partes = valor.split('.');
+      if (partes[1] && partes[1].length > 2) {
+        valor = partes[0] + '.' + partes[1].slice(0, 2);
+        const inputEl = document.getElementById(`item-precio-${idx}`);
+        if (inputEl) inputEl.value = valor;
+      }
+    }
+    it.precio = Number(valor);
+    it.subtotal = (Number(it.cantidad || 0) * Number(it.precio || 0));
+    it.precioUnitario = Number(it.precio || 0);
+
+    const subtotalEl = document.getElementById(`item-subtotal-${idx}`);
+    if (subtotalEl) {
+      subtotalEl.textContent = `$${it.subtotal.toFixed(2)}`;
+    }
+    window.actualizarBannerTotal();
+  } else if (campo === 'cantidad') {
+    it.cantidad = Number(valor);
     it.subtotal = (Number(it.cantidad || 0) * Number(it.precio || 0));
     it.precioUnitario = Number(it.precio || 0);
 
