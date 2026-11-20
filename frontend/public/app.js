@@ -800,7 +800,9 @@ function renderDashboard() {
                 </tr>
               ` : solicitudesRol.slice(0, 5).map(s => `
                 <tr class="hover:bg-slate-800/40 transition-colors">
-                  <td class="py-3 px-4 font-mono font-semibold text-blue-400">${s.id}</td>
+                  <td class="py-3 px-4 font-mono font-semibold text-blue-400">
+                    <span class="inline-block max-w-[200px] truncate align-middle" title="${s.id}">${formatearIdVisual(s.id)}</span>
+                  </td>
                   <td class="py-3 px-4 font-medium max-w-xs truncate">${s.descripcion}</td>
                   <td class="py-3 px-4 text-slate-400">${s.proveedor}</td>
                   <td class="py-3 px-4 font-semibold text-white">$${Number(s.total || 0).toFixed(2)}</td>
@@ -915,10 +917,10 @@ function renderKanban() {
                   </div>
                 ` : colItems.map(item => `
                   <div onclick="verDetalleSolicitud('${item.id}')" class="bg-aura-card border border-aura-border hover:border-blue-500/50 rounded-xl p-3.5 cursor-pointer shadow-md hover:shadow-lg transition-all space-y-2.5">
-                    <div class="flex items-center justify-between">
-                      <span class="text-[11px] font-mono font-bold text-blue-400">${item.id}</span>
+                    <div class="flex items-center justify-between gap-2 min-w-0">
+                      <span class="text-[11px] font-mono font-bold text-blue-400 truncate flex-1" title="${item.id}">${formatearIdVisual(item.id)}</span>
                       ${item.esAltoMonto ? `
-                        <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex-shrink-0">
                           > $1k
                         </span>
                       ` : ''}
@@ -965,7 +967,7 @@ function renderNuevaSolicitud() {
               ${isEditing ? 'Editar Borrador de Requerimiento' : 'Nueva Solicitud de Compra (SC)'}
             </h3>
             ${isEditing 
-              ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1"><i class="fa-solid fa-cloud text-[9px]"></i>Borrador en DynamoDB (ID: ${state.editingDraftId})</span>`
+              ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1" title="${state.editingDraftId}"><i class="fa-solid fa-cloud text-[9px]"></i>Borrador en DynamoDB (ID: ${formatearIdVisual(state.editingDraftId)})</span>`
               : `<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-300 border border-slate-700">Formulario Nuevo (Sin Guardar)</span>`}
           </div>
           <p class="text-xs text-slate-400">
@@ -1173,7 +1175,9 @@ function renderAprobaciones() {
                 </tr>
               ` : pendientes.map(s => `
                 <tr class="hover:bg-slate-800/40 transition-colors">
-                  <td class="py-3.5 px-4 font-mono font-bold text-blue-400">${s.id}</td>
+                  <td class="py-3.5 px-4 font-mono font-bold text-blue-400">
+                    <span class="inline-block max-w-[200px] truncate align-middle" title="${s.id}">${formatearIdVisual(s.id)}</span>
+                  </td>
                   <td class="py-3.5 px-4 font-medium">${s.solicitante}</td>
                   <td class="py-3.5 px-4 max-w-sm truncate">${s.descripcion}</td>
                   <td class="py-3.5 px-4 font-mono font-bold text-white">$${Number(s.total || 0).toFixed(2)}</td>
@@ -1361,8 +1365,14 @@ function renderDetalleSolicitud() {
       <div class="bg-aura-card border border-aura-border rounded-2xl p-6 shadow-2xl space-y-6">
         <div class="flex items-start justify-between border-b border-aura-border pb-4">
           <div>
-            <div class="flex items-center gap-2 mb-1">
-              <span class="text-xs font-mono text-blue-400 font-bold">${item.id}</span>
+            <div class="flex items-center gap-2 mb-1 flex-wrap">
+              <span class="text-xs font-mono text-blue-400 font-bold px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20" title="${item.id}">${formatearIdVisual(item.id, 24)}</span>
+              ${item.id && item.id.length > 18 ? `
+                <button type="button" onclick="if(navigator.clipboard){navigator.clipboard.writeText('${item.id}'); showToast('Código copiado: ${item.id}', 'info');}" title="Copiar código completo" class="px-1.5 py-0.5 text-slate-400 hover:text-white rounded text-[10px] bg-slate-800 border border-aura-border transition-colors flex items-center gap-1">
+                  <i class="fa-solid fa-copy text-[9px]"></i>
+                  <span>Copiar</span>
+                </button>
+              ` : ''}
               <span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-aura-border font-medium">${item.departamento || 'DEP-TI'}</span>
             </div>
             <h3 class="text-lg font-bold text-white mb-1">${item.descripcion}</h3>
@@ -1704,6 +1714,34 @@ function renderColorSwatch(hex, name, token) {
 }
 
 // ----------------- HELPERS VISUALES -----------------
+function formatearIdVisual(id, maxChars = 18) {
+  if (!id) return '';
+  const strId = String(id).trim();
+  if (strId.length <= maxChars) return strId;
+
+  // Si tiene prefijo REQ- y es largo (UUID o hash SHA-256):
+  if (strId.startsWith('REQ-')) {
+    const cuerpo = strId.substring(4);
+    if (cuerpo.length > 10) {
+      return `REQ-${cuerpo.substring(0, 6)}...${cuerpo.slice(-4)}`;
+    }
+    return strId;
+  }
+
+  // Si tiene prefijo DRAFT- o similar
+  if (strId.startsWith('DRAFT-')) {
+    const cuerpo = strId.substring(6);
+    if (cuerpo.length > 10) {
+      return `DRAFT-${cuerpo.substring(0, 5)}...${cuerpo.slice(-3)}`;
+    }
+    return strId;
+  }
+
+  // Identificadores tipo UUID o hash sin prefijo (ej. ebc9ddd1-03c3-4564-b467-6ab9733f2d31)
+  return `${strId.substring(0, 8)}...${strId.slice(-4)}`;
+}
+window.formatearIdVisual = formatearIdVisual;
+
 function renderBadgeEstado(estado) {
   switch (estado ? estado.toLowerCase() : '') {
     case 'registrando':
