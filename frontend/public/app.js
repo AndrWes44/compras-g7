@@ -697,7 +697,9 @@ function renderDashboard() {
     : (isCompras ? state.solicitudes.filter(s => s.estado !== 'borrador') : state.solicitudes);
 
   const countTotal = solicitudesRol.length;
-  const countPendientes = solicitudesRol.filter(s => s.estado === 'en_revision' || s.estado === 'borrador').length;
+  const countBorradores = solicitudesRol.filter(s => s.estado === 'borrador').length;
+  const countEnRevision = solicitudesRol.filter(s => s.estado === 'en_revision').length;
+  const countPendientes = countBorradores + countEnRevision;
   const countAprobadas = solicitudesRol.filter(s => s.estado === 'aprobado').length;
   const gastoTotal = solicitudesRol.filter(s => s.estado === 'aprobado').reduce((acc, curr) => acc + (Number(curr.total) || 0), 0);
 
@@ -748,8 +750,15 @@ function renderDashboard() {
             <span class="text-xs font-medium">Pendientes de Acción</span>
             <i class="fa-solid fa-clock text-amber-400"></i>
           </div>
-          <div class="text-2xl font-bold text-amber-400">${countPendientes}</div>
-          <span class="text-[11px] text-slate-500">Requieren seguimiento</span>
+          <div class="flex items-baseline gap-2">
+            <div class="text-2xl font-bold text-amber-400">${countPendientes}</div>
+            ${isSolicitante ? `
+              <div class="text-[11px] font-medium text-slate-400">
+                (<span class="text-slate-300" title="Borradores privados por enviar">${countBorradores} borradores</span> • <span class="text-amber-400" title="Enviadas esperando dictamen">${countEnRevision} en revisión</span>)
+              </div>
+            ` : ''}
+          </div>
+          <span class="text-[11px] text-slate-500 block mt-0.5">Requieren seguimiento</span>
         </div>
 
         <div class="bg-aura-card border border-aura-border rounded-xl p-5 shadow-lg">
@@ -2187,6 +2196,8 @@ window.normalizarSolicitudDesdeApi = function(raw) {
     fecha: fechaFormateada,
     items: itemsNormalizados,
     comentariosGerente: raw.comments || raw.comentariosGerente || raw.dictamen || '',
+    comentarios: raw.comentarios || raw.comments || raw.cancellationReason || raw.motivo || raw.motivoAnulacion || '',
+    motivoAnulacion: raw.cancellationReason || raw.motivoAnulacion || raw.motivo || raw.comentarios || raw.comments || '',
     esAltoMonto: esAltoMonto,
     aprobador: raw.decidedBy || raw.aprobador || raw.approver || '',
     executionArn: raw.executionArn || '',
