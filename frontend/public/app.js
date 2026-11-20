@@ -2166,6 +2166,15 @@ window.normalizarSolicitudDesdeApi = function(raw) {
     if (provEncontrado) proveedorNombre = provEncontrado.nombre;
   }
 
+  // Extraer motivo de anulación / comentarios desde historial de eventos de DynamoDB (history) o raíz
+  let motivoAnulacionDetectado = raw.cancellationReason || raw.motivoAnulacion || raw.motivo || raw.comentarios || raw.comments || '';
+  if (!motivoAnulacionDetectado && Array.isArray(raw.history)) {
+    const cancelEvent = [...raw.history].reverse().find(h => h && (h.status === 'CANCELLED' || h.comentarios || h.comments));
+    if (cancelEvent) {
+      motivoAnulacionDetectado = cancelEvent.comentarios || cancelEvent.comments || '';
+    }
+  }
+
   // Regla oficial: hasta $1,000 Gerente; más de $1,000 Director
   const esAltoMonto = raw.requiereAprobacionDe 
     ? raw.requiereAprobacionDe.toLowerCase() === 'director'
@@ -2189,8 +2198,9 @@ window.normalizarSolicitudDesdeApi = function(raw) {
     fecha: fechaFormateada,
     items: itemsNormalizados,
     comentariosGerente: raw.comments || raw.comentariosGerente || raw.dictamen || '',
-    comentarios: raw.comentarios || raw.comments || raw.cancellationReason || raw.motivo || raw.motivoAnulacion || '',
-    motivoAnulacion: raw.cancellationReason || raw.motivoAnulacion || raw.motivo || raw.comentarios || raw.comments || '',
+    comentarios: motivoAnulacionDetectado,
+    motivoAnulacion: motivoAnulacionDetectado,
+    history: Array.isArray(raw.history) ? raw.history : [],
     esAltoMonto: esAltoMonto,
     aprobador: raw.decidedBy || raw.aprobador || raw.approver || '',
     executionArn: raw.executionArn || '',
@@ -3605,6 +3615,12 @@ window.anularSolicitud = async function(id) {
 
   try {
     await window.apiService.anularSolicitud(id, comentarios.trim());
+    if (s) {
+      s.status = 'CANCELLED';
+      s.estado = 'anulado';
+      s.comentarios = comentarios.trim();
+      s.motivoAnulacion = comentarios.trim();
+    }
     showToast(`Solicitud ${id} anulada exitosamente (CANCELLED).`, 'info');
     await window.recargarSolicitudesApi();
     if (state.currentView === 'detalle_solicitud') {
