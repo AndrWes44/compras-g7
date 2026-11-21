@@ -75,7 +75,7 @@ const state = window.state = {
     get solicitante() {
       return {
         name: (state.currentUser?.role === 'solicitante' && state.currentUser?.name) || 'Carlos Mendoza',
-        roleTitle: 'Solicitante Departamental',
+        roleTitle: 'Solicitante',
         initials: 'CM',
         badgeColor: 'bg-blue-600',
         email: state.currentUser?.email || 'solicitante@g7.com'
@@ -84,7 +84,7 @@ const state = window.state = {
     get gerente() {
       return {
         name: (state.currentUser?.role === 'gerente' && state.currentUser?.name) || 'Ing. Herberth',
-        roleTitle: 'Gerente Aprobador (hasta $1,000)',
+        roleTitle: 'Gerente',
         initials: 'IH',
         badgeColor: 'bg-emerald-600',
         email: state.currentUser?.email || 'gerente@g7.com'
@@ -93,7 +93,7 @@ const state = window.state = {
     get director() {
       return {
         name: (state.currentUser?.role === 'director' && state.currentUser?.name) || 'Director General',
-        roleTitle: 'Director Financiero & Aprobador Alto Monto (> $1,000)',
+        roleTitle: 'Director',
         initials: 'DG',
         badgeColor: 'bg-purple-600',
         email: state.currentUser?.email || 'director@g7.com'
@@ -102,7 +102,7 @@ const state = window.state = {
     get compras() {
       return {
         name: (state.currentUser?.role === 'compras' && state.currentUser?.name) || 'Compras & Adquisiciones',
-        roleTitle: 'Compras & Adquisiciones',
+        roleTitle: 'Compras',
         initials: 'AM',
         badgeColor: 'bg-sky-600',
         email: state.currentUser?.email || 'compras@g7.com'
@@ -111,7 +111,7 @@ const state = window.state = {
     get admin() {
       return {
         name: (state.currentUser?.name) || 'Administrador',
-        roleTitle: 'Administrador de Cuentas',
+        roleTitle: 'Administrador',
         initials: 'AD',
         badgeColor: 'bg-purple-600',
         email: state.currentUser?.email || 'admin@g7.com'
@@ -119,6 +119,13 @@ const state = window.state = {
     }
   }
 };
+
+// ----------------- FORMATEO DE MONEDA -----------------
+function formatearMoneda(monto) {
+  const num = Number(monto) || 0;
+  return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+window.formatearMoneda = formatearMoneda;
 
 // ----------------- RENDER ENGINE -----------------
 function render() {
@@ -198,7 +205,7 @@ function renderLogin() {
         </div>
 
         <h2 class="text-lg font-semibold text-slate-200 mb-1">Iniciar Sesión</h2>
-        <p class="text-xs text-slate-400 mb-6">Ingresa tus credenciales corporativas verificadas en Amazon Cognito</p>
+        <p class="text-xs text-slate-400 mb-6">Ingresa con tu correo y contraseña corporativa</p>
 
         <!-- Formulario Oficial de Autenticación -->
         <form onsubmit="handleLoginFormSubmit(event)" class="space-y-4">
@@ -255,7 +262,7 @@ function renderRegistro() {
           </div>
           <div>
             <h1 class="text-xl font-bold tracking-tight text-white">Crear Cuenta Institucional</h1>
-            <p class="text-xs text-slate-400">Registro verificado con Amazon Cognito</p>
+            <p class="text-xs text-slate-400">Ingresa tus datos para registrar tu cuenta</p>
           </div>
         </div>
 
@@ -364,7 +371,7 @@ function renderAdminUsuarios() {
       <div class="flex items-center justify-between">
         <div>
           <h3 class="text-base font-bold text-white">Panel de Control: Aprobación y Roles de Usuarios</h3>
-          <p class="text-xs text-slate-400">Altas y solicitudes de registro del flujo oficial de incorporación (DynamoDB Business). No incluye cuentas técnicas preexistentes de Cognito.</p>
+          <p class="text-xs text-slate-400">Gestiona las solicitudes de acceso y los roles del equipo.</p>
         </div>
         <div class="flex items-center gap-2">
           <button onclick="setAdminFiltroEstado('')" class="px-3 py-1.5 rounded-lg text-xs font-medium ${state.adminFiltroEstado === '' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'}">Todos</button>
@@ -386,14 +393,13 @@ function renderAdminUsuarios() {
                 <th class="py-3 px-4">Correo</th>
                 <th class="py-3 px-4">Estado</th>
                 <th class="py-3 px-4">Rol Asignado</th>
-                <th class="py-3 px-4">Versión</th>
                 <th class="py-3 px-4 text-center">Acciones</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-aura-border text-slate-200">
               ${usuarios.length === 0 ? `
                 <tr>
-                  <td colspan="6" class="py-8 text-center text-slate-500 italic">
+                  <td colspan="5" class="py-8 text-center text-slate-500 italic">
                     No se encontraron usuarios bajo este filtro.
                   </td>
                 </tr>
@@ -418,7 +424,6 @@ function renderAdminUsuarios() {
                         ${canonicalizarRol(u.assignedRole || u.role)}
                       </span>
                     </td>
-                    <td class="py-3.5 px-4 font-mono text-slate-500">v${u.version || 1}</td>
                     <td class="py-3.5 px-4 text-center">
                       <div class="flex items-center justify-center gap-2">
                         <button onclick="abrirModalAprobarUsuario('${sub}', ${u.version || 1}, '${encodeURIComponent(u.email || '')}', '${encodeURIComponent(u.name || '')}')" class="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[11px] shadow">
@@ -446,7 +451,7 @@ function canonicalizarRol(rol) {
   if (!rol) return 'Sin rol';
   const rLower = String(rol).toLowerCase();
   if (rLower === 'admin' || rLower === 'administrador' || rLower === 'administrador de cuentas') {
-    return 'Administrador de Cuentas';
+    return 'Administrador';
   }
   return rol;
 }
@@ -460,11 +465,11 @@ function renderRecuperarPassword() {
         </div>
         <h2 class="text-lg font-bold text-white">Recuperación de Contraseña no Disponible</h2>
         <p class="text-xs text-slate-300">
-          El autoservicio de recuperación de contraseña no se encuentra habilitado en el entorno actual de Amazon Cognito.
+          El autoservicio de recuperación de contraseña no se encuentra habilitado.
         </p>
         <div class="p-3.5 bg-slate-900/60 rounded-xl border border-aura-border text-left text-xs text-slate-400 space-y-1">
           <p class="text-[11px] text-slate-300">
-            Para restablecer tu acceso o solicitar una nueva clave, por favor contacta directamente al <strong class="text-white">Administrador de Cuentas</strong> o al departamento de soporte técnico.
+            Para restablecer tu acceso o solicitar una nueva clave, por favor contacta directamente al <strong class="text-white">Administrador</strong> o al departamento de soporte técnico.
           </p>
         </div>
         <button onclick="navigateTo('login')" class="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg text-xs shadow transition-all">
@@ -499,7 +504,7 @@ function renderSidebar() {
     navItems = [
       { id: 'dashboard', label: 'Dashboard', icon: 'fa-chart-pie', allowed: true },
       { id: 'solicitudes', label: 'Solicitudes', icon: 'fa-table-columns', allowed: true },
-      { id: 'aprobaciones', label: 'Bandeja Dictamen (≤ $1k)', icon: 'fa-clipboard-check', allowed: true, badge: pendientesGerente || null },
+      { id: 'aprobaciones', label: 'Bandeja de Aprobaciones', icon: 'fa-clipboard-check', allowed: true, badge: pendientesGerente || null },
       { id: 'proveedores', label: 'Catálogo Proveedores', icon: 'fa-building', allowed: true }
     ];
   } else if (isDirector) {
@@ -507,7 +512,7 @@ function renderSidebar() {
     navItems = [
       { id: 'dashboard', label: 'Dashboard', icon: 'fa-chart-pie', allowed: true },
       { id: 'solicitudes', label: 'Solicitudes', icon: 'fa-table-columns', allowed: true },
-      { id: 'aprobaciones', label: 'Dictamen Alto Monto (> $1k)', icon: 'fa-clipboard-check', allowed: true, badge: pendientesDirector || null },
+      { id: 'aprobaciones', label: 'Bandeja de Aprobaciones', icon: 'fa-clipboard-check', allowed: true, badge: pendientesDirector || null },
       { id: 'proveedores', label: 'Catálogo Proveedores', icon: 'fa-building', allowed: true }
     ];
   } else if (isCompras) {
@@ -589,7 +594,7 @@ function renderTopNav() {
     dashboard: isSolicitante ? 'Dashboard — Solicitante' : (state.currentRole === 'director' ? 'Dashboard — Dirección General' : (state.currentRole === 'gerente' ? 'Dashboard — Gerencia' : 'Dashboard — Compras & Adquisiciones')),
     solicitudes: isSolicitante ? 'Mis Solicitudes' : 'Tablero Kanban de Solicitudes',
     nueva_solicitud: state.editingDraftId ? 'Editar Borrador de Requerimiento' : 'Nueva Solicitud de Compra',
-    aprobaciones: state.currentRole === 'director' ? 'Dictamen Alto Monto (> $1,000)' : 'Bandeja de Dictamen y Aprobaciones (≤ $1,000)',
+    aprobaciones: 'Bandeja de Aprobaciones',
     proveedores: 'Catálogo Oficial de Proveedores',
     proveedor_nuevo: 'Registrar Nuevo Proveedor (Compras)',
     proveedor_editar: 'Editar Proveedor (Compras)',
@@ -598,24 +603,17 @@ function renderTopNav() {
     tokens: 'Tokens de Diseño & Guía Visual'
   };
 
-  const statusIndicator = state.apiState.isConnected === true
-    ? `<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30" title="API Backend activa"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>API Online</span>`
-    : state.apiState.isConnected === false
-    ? `<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-500/15 text-red-400 border border-red-500/30" title="API no conectada"><span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>Sin Conexión</span>`
-    : '';
-
   return `
     <header class="h-16 px-8 border-b border-aura-border flex items-center justify-between shrink-0 bg-aura-canvas/80 backdrop-blur sticky top-0 z-20">
       <div class="flex items-center gap-3">
         <div>
           <h2 class="text-base font-bold text-white tracking-tight">${titles[state.currentView] || 'AURA Compras'}</h2>
-          <p class="text-[11px] text-slate-400">Sistema Corporativo v2.0 • Amazon Cognito & DynamoDB</p>
+          <p class="text-[11px] text-slate-400">Gestión de compras y aprobaciones corporativas</p>
         </div>
-        ${statusIndicator}
       </div>
 
       <div class="flex items-center gap-3">
-        <button onclick="${Boolean(state.currentUser && state.currentUser.isAdmin) ? 'recargarAdminUsuariosApi()' : (state.currentView === 'aprobaciones' ? 'recargarAprobacionesApi()' : 'recargarSolicitudesApi()')}" title="Sincronizar con AWS" class="p-2 text-slate-400 hover:text-white hover:bg-slate-800/60 rounded-lg text-xs border border-aura-border transition-colors ${state.apiState.isLoading || (state.aprobacionesState && state.aprobacionesState.isLoading) ? 'animate-spin text-blue-400' : ''}">
+        <button onclick="${Boolean(state.currentUser && state.currentUser.isAdmin) ? 'recargarAdminUsuariosApi()' : (state.currentView === 'aprobaciones' ? 'recargarAprobacionesApi()' : 'recargarSolicitudesApi()')}" title="Sincronizar datos" class="p-2 text-slate-400 hover:text-white hover:bg-slate-800/60 rounded-lg text-xs border border-aura-border transition-colors ${state.apiState.isLoading || (state.aprobacionesState && state.aprobacionesState.isLoading) ? 'animate-spin text-blue-400' : ''}">
           <i class="fa-solid fa-rotate"></i>
         </button>
 
@@ -710,8 +708,8 @@ function renderDashboard() {
           </h3>
           <p class="text-xs text-slate-400">
             ${isSolicitante ? 'Aquí puedes monitorear tus órdenes de compra y borradores privados.' :
-              isGerente ? 'Panel de control de presupuesto, auditoría y aprobaciones ordinarias (≤ $1,000 USD).' :
-              isDirector ? 'Dirección General: flujo de dictamen y fiscalización para adquisiciones de alto monto (> $1,000 USD).' :
+              isGerente ? 'Panel de control de presupuesto, auditoría y aprobaciones de área.' :
+              isDirector ? 'Dirección General: flujo de dictamen y fiscalización para adquisiciones estratégicas.' :
               'Panel operativo de compras: supervisión de órdenes, cotizaciones y catálogo oficial de proveedores.'}
           </p>
         </div>
@@ -768,7 +766,7 @@ function renderDashboard() {
             <span class="text-xs font-medium">Monto Total Aprobado</span>
             <i class="fa-solid fa-dollar-sign text-sky-400"></i>
           </div>
-          <div class="text-2xl font-bold text-white">$${gastoTotal.toFixed(2)}</div>
+          <div class="text-2xl font-bold text-white">${formatearMoneda(gastoTotal)}</div>
           <span class="text-[11px] text-slate-500">Presupuesto ejecutado</span>
         </div>
       </div>
@@ -798,18 +796,18 @@ function renderDashboard() {
             <tbody class="divide-y divide-aura-border text-slate-200">
               ${solicitudesRol.length === 0 ? `
                 <tr>
-                  <td colspan="6" class="py-8 text-center text-slate-500 italic">No hay actividad reciente registrada en AWS DynamoDB.</td>
+                  <td colspan="6" class="py-8 text-center text-slate-500 italic">No hay actividad reciente registrada.</td>
                 </tr>
               ` : solicitudesRol.slice(0, 5).map(s => `
                 <tr class="hover:bg-slate-800/40 transition-colors">
-                  <td class="py-3 px-4 font-mono font-semibold text-blue-400">
+                  <td class="py-3 px-4 font-mono font-semibold text-blue-400 whitespace-nowrap">
                     <span class="inline-block max-w-[200px] truncate align-middle" title="${s.id}">${formatearIdVisual(s.id)}</span>
                   </td>
                   <td class="py-3 px-4 font-medium max-w-xs truncate">${s.descripcion}</td>
-                  <td class="py-3 px-4 text-slate-400">${s.proveedor}</td>
-                  <td class="py-3 px-4 font-semibold text-white">$${Number(s.total || 0).toFixed(2)}</td>
-                  <td class="py-3 px-4">${renderBadgeEstado(s.estado)}</td>
-                  <td class="py-3 px-4 text-right">
+                  <td class="py-3 px-4 text-slate-400 truncate max-w-[150px]">${s.proveedor}</td>
+                  <td class="py-3 px-4 font-semibold text-white whitespace-nowrap">${formatearMoneda(s.total)}</td>
+                  <td class="py-3 px-4 whitespace-nowrap">${renderBadgeEstado(s.estado)}</td>
+                  <td class="py-3 px-4 text-right whitespace-nowrap">
                     <button onclick="verDetalleSolicitud('${s.id}')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-aura-border rounded text-[11px] transition-colors">
                       Ver Ficha
                     </button>
@@ -850,7 +848,7 @@ function renderKanban() {
     },
     {
       id: 'en_revision',
-      title: 'En Revisión (Dictamen)',
+      title: 'En Revisión',
       borderColor: 'border-amber-500/40',
       badgeColor: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
       filter: (s) => (s.status === 'PENDING' || s.status === 'REGISTERING' || (!s.status && s.estado === 'en_revision')) && !s.isLegacyOrReadOnly && s.estado !== 'legado'
@@ -874,7 +872,7 @@ function renderKanban() {
   if (hasLegacy) {
     columns.push({
       id: 'legado',
-      title: 'Histórico (Solo Lectura)',
+      title: 'Histórico',
       borderColor: 'border-slate-600/60',
       badgeColor: 'bg-slate-800 text-slate-400 border border-slate-700',
       filter: (s) => s.estado === 'legado' || s.isLegacyOrReadOnly
@@ -883,12 +881,11 @@ function renderKanban() {
 
   return `
     <div class="h-full flex flex-col space-y-3">
-      <!-- Barra de estado y paginación DynamoDB -->
+      <!-- Barra de estado y paginación -->
       <div class="flex items-center justify-between px-1 text-xs">
         <div class="flex items-center gap-2">
           <span class="text-slate-400 font-medium">Mostrando <strong class="text-white">${items.length}</strong> solicitudes</span>
-          ${state.apiState.totalApi ? `<span class="text-slate-500">• Total en DynamoDB: ${state.apiState.totalApi}</span>` : ''}
-          ${state.apiState.isLoading ? '<span class="text-blue-400 animate-pulse ml-2"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Sincronizando con AWS...</span>' : ''}
+          ${state.apiState.isLoading ? '<span class="text-blue-400 animate-pulse ml-2"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Actualizando solicitudes...</span>' : ''}
         </div>
         <div class="flex items-center gap-2">
           ${state.apiState.hayMasRegistros ? `
@@ -921,25 +918,20 @@ function renderKanban() {
                   <div onclick="verDetalleSolicitud('${item.id}')" class="bg-aura-card border border-aura-border hover:border-blue-500/50 rounded-xl p-3.5 cursor-pointer shadow-md hover:shadow-lg transition-all space-y-2.5">
                     <div class="flex items-center justify-between gap-2 min-w-0">
                       <span class="text-[11px] font-mono font-bold text-blue-400 truncate flex-1" title="${item.id}">${formatearIdVisual(item.id)}</span>
-                      ${item.esAltoMonto ? `
-                        <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex-shrink-0">
-                          > $1k
-                        </span>
-                      ` : ''}
                     </div>
 
                     <h4 class="text-xs font-semibold text-white line-clamp-2 leading-relaxed">
                       ${item.descripcion}
                     </h4>
 
-                    <div class="pt-2 border-t border-aura-border flex items-center justify-between text-[11px]">
-                      <span class="text-slate-400 truncate max-w-[120px]">${item.proveedor}</span>
-                      <span class="font-mono font-bold text-white">$${Number(item.total || 0).toFixed(2)}</span>
+                    <div class="pt-2 border-t border-aura-border flex items-center justify-between text-[11px] gap-2 min-w-0">
+                      <span class="text-slate-400 truncate max-w-[130px] flex-1">${item.proveedor}</span>
+                      <span class="font-mono font-bold text-white shrink-0 whitespace-nowrap">${formatearMoneda(item.total)}</span>
                     </div>
 
-                    <div class="flex items-center justify-between text-[10px] text-slate-500 pt-1">
-                      <span>${item.solicitante}</span>
-                      <span>${item.fecha}</span>
+                    <div class="flex items-center justify-between text-[10px] text-slate-500 pt-1 gap-2 min-w-0">
+                      <span class="truncate flex-1">${item.solicitante}</span>
+                      <span class="shrink-0 whitespace-nowrap">${item.fecha}</span>
                     </div>
                   </div>
                 `).join('')}
@@ -969,7 +961,7 @@ function renderNuevaSolicitud() {
               ${isEditing ? 'Editar Borrador de Requerimiento' : 'Nueva Solicitud de Compra (SC)'}
             </h3>
             ${isEditing 
-              ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1" title="${state.editingDraftId}"><i class="fa-solid fa-cloud text-[9px]"></i>Borrador en DynamoDB (ID: ${formatearIdVisual(state.editingDraftId)})</span>`
+              ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1" title="${state.editingDraftId}"><i class="fa-solid fa-file-pen text-[9px]"></i>Borrador guardado (ID: ${formatearIdVisual(state.editingDraftId)})</span>`
               : `<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-300 border border-slate-700">Formulario Nuevo (Sin Guardar)</span>`}
           </div>
           <p class="text-xs text-slate-400">
@@ -1072,26 +1064,22 @@ function renderNuevaSolicitud() {
           </div>
         </div>
 
-        <!-- Banner de Política de Dictamen Oficial (Gerente vs Director) -->
-        <div id="banner-politica-dictamen" class="p-3.5 rounded-xl border flex items-center justify-between transition-colors ${
-          esAltoMonto 
-            ? 'bg-amber-500/10 border-amber-500/40 text-amber-300' 
-            : 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300'
-        }">
+        <!-- Banner de Resumen y Estado -->
+        <div id="banner-politica-dictamen" class="p-3.5 rounded-xl border flex items-center justify-between transition-colors bg-blue-500/10 border-blue-500/40 text-blue-300">
           <div class="flex items-center gap-2.5">
-            <i class="fa-solid ${esAltoMonto ? 'fa-triangle-exclamation text-amber-400' : 'fa-circle-check text-emerald-400'} text-base" id="banner-icono"></i>
+            <i class="fa-solid fa-file-invoice text-blue-400 text-base" id="banner-icono"></i>
             <div>
               <span class="text-xs font-bold block" id="banner-titulo">
-                ${esAltoMonto ? 'Solicitud de Alto Monto (> $1,000 USD)' : 'Aprobación ordinaria de Gerencia (Hasta $1,000 USD)'}
+                Resumen de Requerimiento
               </span>
               <span class="text-[11px] opacity-80" id="banner-subtitulo">
-                ${esAltoMonto ? 'Monto superior a $1,000: requiere dictamen exclusivo de Dirección General.' : 'Monto de hasta $1,000: aprobación directa de Gerencia.'}
+                El flujo de revisión y aprobación se asignará automáticamente de acuerdo a las políticas corporativas.
               </span>
             </div>
           </div>
           <div class="text-right">
             <span class="text-[10px] uppercase font-semibold opacity-70 block">Total Estimado</span>
-            <span class="text-base font-bold font-mono" id="total-estimado-valor">$${totalCalculado.toFixed(2)}</span>
+            <span class="text-base font-bold font-mono" id="total-estimado-valor">${formatearMoneda(totalCalculado)}</span>
           </div>
         </div>
 
@@ -1133,12 +1121,10 @@ function renderAprobaciones() {
       <div class="flex items-center justify-between">
         <div>
           <h3 class="text-sm font-bold text-white">
-            ${isDirector ? 'Bandeja de Dictamen — Dirección General (Monto > $1,000 USD)' : 'Bandeja de Aprobaciones — Gerencia (Hasta $1,000 USD)'}
+            Bandeja de Aprobaciones
           </h3>
           <p class="text-xs text-slate-400">
-            ${isDirector 
-              ? 'Dictamen exclusivo de fiscalización directiva para adquisiciones de alto presupuesto (GET /api/aprobaciones).' 
-              : 'Revisión y dictamen de solicitudes departamentales ordinarias (GET /api/aprobaciones).'}
+            Revisión y dictamen de requerimientos de compra asignados a tu nivel de autorización.
           </p>
         </div>
         <div class="flex items-center gap-2">
@@ -1164,33 +1150,25 @@ function renderAprobaciones() {
                 <th class="py-3 px-4">Solicitante</th>
                 <th class="py-3 px-4">Descripción del Bien/Servicio</th>
                 <th class="py-3 px-4">Monto Cotizado</th>
-                <th class="py-3 px-4">Clasificación</th>
                 <th class="py-3 px-4 text-center">Acción de Dictamen</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-aura-border text-slate-200">
               ${pendientes.length === 0 ? `
                 <tr>
-                  <td colspan="6" class="py-8 text-center text-slate-500 italic">
+                  <td colspan="5" class="py-8 text-center text-slate-500 italic">
                     No tienes requerimientos pendientes por dictaminar en tu nivel de autorización.
                   </td>
                 </tr>
               ` : pendientes.map(s => `
                 <tr class="hover:bg-slate-800/40 transition-colors">
-                  <td class="py-3.5 px-4 font-mono font-bold text-blue-400">
+                  <td class="py-3.5 px-4 font-mono font-bold text-blue-400 whitespace-nowrap">
                     <span class="inline-block max-w-[200px] truncate align-middle" title="${s.id}">${formatearIdVisual(s.id)}</span>
                   </td>
-                  <td class="py-3.5 px-4 font-medium">${s.solicitante}</td>
+                  <td class="py-3.5 px-4 font-medium whitespace-nowrap">${s.solicitante}</td>
                   <td class="py-3.5 px-4 max-w-sm truncate">${s.descripcion}</td>
-                  <td class="py-3.5 px-4 font-mono font-bold text-white">$${Number(s.total || 0).toFixed(2)}</td>
-                  <td class="py-3.5 px-4">
-                    ${s.esAltoMonto ? `
-                      <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">Alto Monto (> $1k)</span>
-                    ` : `
-                      <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-300 border border-slate-700">Ordinaria (≤ $1k)</span>
-                    `}
-                  </td>
-                  <td class="py-3.5 px-4 text-center">
+                  <td class="py-3.5 px-4 font-mono font-bold text-white whitespace-nowrap">${formatearMoneda(s.total)}</td>
+                  <td class="py-3.5 px-4 text-center whitespace-nowrap">
                     <div class="flex items-center justify-center gap-2">
                       <button onclick="dictaminarSolicitud('${s.id}', 'aprobado')" ${state.inFlightOperations?.has(`dictamen_${s.id}`) ? 'disabled' : ''} class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold text-[11px] shadow-sm transition-all flex items-center gap-1.5">
                         <i class="fa-solid fa-check text-[10px]"></i>
@@ -1262,7 +1240,7 @@ function renderProveedores() {
               ${filtrados.length === 0 ? `
                 <tr>
                   <td colspan="${isCompras ? 7 : 5}" class="py-8 text-center text-slate-500 italic">
-                    No hay proveedores registrados en el catálogo oficial de DynamoDB.
+                    No hay proveedores registrados.
                   </td>
                 </tr>
               ` : filtrados.map(p => `
@@ -1326,7 +1304,7 @@ function renderDetalleSolicitud() {
         </div>
         <div>
           <h3 class="text-base font-bold text-white mb-1">Solicitud no encontrada (404)</h3>
-          <p class="text-xs text-slate-400">El identificador <strong class="text-white">${state.selectedSolicitudId}</strong> no existe en el registro de DynamoDB o fue eliminado.</p>
+          <p class="text-xs text-slate-400">El identificador <strong class="text-white">${state.selectedSolicitudId}</strong> no fue encontrado o fue eliminado.</p>
         </div>
         <button onclick="navigateTo('solicitudes')" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg shadow transition-all inline-flex items-center gap-2">
           <i class="fa-solid fa-arrow-left text-[10px]"></i>
@@ -1349,18 +1327,6 @@ function renderDetalleSolicitud() {
 
         <div class="flex items-center gap-2">
           ${renderBadgeEstado(item.estado)}
-          ${item.esAltoMonto ? `
-            <span class="px-2 py-1 rounded text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1">
-              <i class="fa-solid fa-star text-[10px]"></i>
-              <span>Alto Monto (> $1,000)</span>
-            </span>
-          ` : ''}
-          ${item.executionArn ? `
-            <span class="px-2 py-1 rounded text-[10px] font-mono bg-purple-500/15 text-purple-300 border border-purple-500/30 flex items-center gap-1" title="${item.executionArn}">
-              <i class="fa-solid fa-bolt text-[9px]"></i>
-              <span>Step Functions</span>
-            </span>
-          ` : ''}
         </div>
       </div>
 
@@ -1379,12 +1345,12 @@ function renderDetalleSolicitud() {
             </div>
             <h3 class="text-lg font-bold text-white mb-1">${item.descripcion}</h3>
             ${item.estado === 'borrador' 
-              ? `<p class="text-xs text-amber-400 font-medium"><i class="fa-solid fa-pencil mr-1 text-[10px]"></i>Borrador privado en DynamoDB (v${item.version || 1}) de <strong class="text-slate-200">${item.solicitante}</strong></p>`
+              ? `<p class="text-xs text-amber-400 font-medium"><i class="fa-solid fa-pencil mr-1 text-[10px]"></i>Borrador guardado por <strong class="text-slate-200">${item.solicitante}</strong></p>`
               : `<p class="text-xs text-slate-400">Enviada el ${item.fecha} por <strong class="text-slate-200">${item.solicitante}</strong></p>`}
           </div>
           <div class="text-right">
             <span class="text-xs text-slate-400 block mb-0.5">Monto Total</span>
-            <span class="text-2xl font-bold font-mono text-white">$${Number(item.total || 0).toFixed(2)}</span>
+            <span class="text-2xl font-bold font-mono text-white">${formatearMoneda(item.total)}</span>
           </div>
         </div>
 
@@ -1413,8 +1379,8 @@ function renderDetalleSolicitud() {
                   <tr>
                     <td class="py-2.5 px-3 font-medium">${it.nombre || 'Partida'}</td>
                     <td class="py-2.5 px-3 text-center">${it.cantidad || 1}</td>
-                    <td class="py-2.5 px-3 text-right font-mono">$${Number(it.precio || 0).toFixed(2)}</td>
-                    <td class="py-2.5 px-3 text-right font-mono font-bold text-white">$${Number(it.subtotal || ((it.cantidad || 1) * (it.precio || 0))).toFixed(2)}</td>
+                    <td class="py-2.5 px-3 text-right font-mono">${formatearMoneda(it.precio)}</td>
+                    <td class="py-2.5 px-3 text-right font-mono font-bold text-white">${formatearMoneda(it.subtotal || ((it.cantidad || 1) * (it.precio || 0)))}</td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -1470,7 +1436,7 @@ function renderDetalleSolicitud() {
             <div class="flex items-center gap-3">
               <i class="fa-solid fa-file-pen text-amber-400 text-xl"></i>
               <div>
-                <span class="text-xs font-bold text-white block">Borrador Privado (DynamoDB v${item.version || 1})</span>
+                <span class="text-xs font-bold text-white block">Borrador Guardado</span>
                 <span class="text-[11px] text-slate-400">Puedes editar las partidas o eliminarlo antes de enviarlo formalmente.</span>
               </div>
             </div>
@@ -1498,8 +1464,8 @@ function renderDetalleSolicitud() {
                 <i class="fa-solid fa-spinner fa-spin text-purple-400 text-xs"></i>
               </div>
               <div>
-                <span class="text-xs font-bold text-white block">Envío en Proceso (REGISTERING)</span>
-                <span class="text-[11px] text-purple-300/80">Documento enviado a AWS Step Functions. Sincronizando persistencia oficial (v${item.submitVersion || item.version || 1}).</span>
+                <span class="text-xs font-bold text-white block">Envío en Proceso</span>
+                <span class="text-[11px] text-purple-300/80">El requerimiento ha sido enviado y se está registrando en el sistema.</span>
               </div>
             </div>
             <div class="flex items-center gap-2">
@@ -1516,24 +1482,18 @@ function renderDetalleSolicitud() {
             </div>
             <div>
               <span class="text-xs font-bold text-white block">
-                Registro Histórico / Estado Legado (${item.status || item.rawStatus || 'LEGACY'})
+                Registro Histórico
               </span>
               <span class="text-[11px] text-slate-400 mt-0.5 block">
-                Este requerimiento corresponde a un flujo anterior incompatible con el dictamen actual. Se conserva en modo de solo lectura según las políticas de auditoría.
+                Este requerimiento corresponde a un flujo anterior. Se conserva en modo de solo lectura según las políticas de auditoría.
               </span>
             </div>
           </div>
         ` : `
-          <div class="p-3.5 rounded-xl border flex items-center gap-3 ${
-            item.esAltoMonto 
-              ? 'bg-amber-500/10 border-amber-500/40 text-amber-300' 
-              : 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300'
-          }">
-            <i class="fa-solid ${item.esAltoMonto ? 'fa-triangle-exclamation text-amber-400' : 'fa-circle-check text-emerald-400'} text-base"></i>
+          <div class="p-3.5 rounded-xl border flex items-center gap-3 bg-blue-500/10 border-blue-500/40 text-blue-300">
+            <i class="fa-solid fa-circle-check text-blue-400 text-base"></i>
             <span class="text-xs font-semibold">
-              ${item.esAltoMonto 
-                ? 'Solicitud de Alto Monto: asignada a Dirección General (> $1,000 USD)' 
-                : 'Solicitud Ordinaria: asignada a Gerencia de Área (≤ $1,000 USD)'}
+              Requerimiento asignado al flujo oficial de aprobación corporativa.
             </span>
           </div>
         `}
@@ -1574,7 +1534,7 @@ function renderProveedorForm(isEdit) {
       <div class="flex items-center justify-between mb-6 pb-4 border-b border-aura-border">
         <div>
           <h3 class="text-base font-bold text-white">${isEdit ? 'Editar Proveedor (Compras)' : 'Registrar Nuevo Proveedor (Compras)'}</h3>
-          <p class="text-xs text-slate-400">Gestión de ficha comercial, fiscal y bancaria en DynamoDB</p>
+          <p class="text-xs text-slate-400">Gestión de ficha comercial, fiscal y bancaria</p>
         </div>
         <button onclick="navigateTo('proveedores')" class="px-3 py-1.5 rounded-lg border border-aura-border text-xs text-slate-300 hover:bg-slate-800 transition-colors">
           Cancelar
@@ -1749,28 +1709,28 @@ function renderBadgeEstado(estado) {
     case 'registrando':
     case 'registering':
       return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-purple-500/15 text-purple-300 border border-purple-500/30">
-        <span class="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse"></span>Registrando (HTTP 202)</span>`;
+        <span class="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse"></span>Enviando</span>`;
     case 'legado':
     case 'requires_supervisor':
     case 'requires_manager':
       return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-700/60 text-slate-300 border border-slate-600">
-        <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Solo Lectura (Legado)</span>`;
+        <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Histórico</span>`;
     case 'anulado':
       return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-700/60 text-slate-300 border border-slate-600">
-        <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Anulado (CANCELLED)</span>`;
+        <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Anulada</span>`;
     case 'aprobado':
       return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Aprobado</span>`;
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Aprobada</span>`;
     case 'rechazado':
       return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-red-500/15 text-red-400 border border-red-500/30">
-        <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>Rechazado</span>`;
+        <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>Rechazada</span>`;
     case 'borrador':
       return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-700/40 text-slate-300 border border-slate-600">
-        <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Borrador Dynamo</span>`;
+        <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Borrador</span>`;
     case 'en_revision':
     default:
       return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30">
-        <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>En Revisión</span>`;
+        <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>En revisión</span>`;
   }
 }
 
@@ -1804,12 +1764,12 @@ function renderModal() {
           <form onsubmit="handleConfirmarAdminDecision(event)" class="space-y-4 pt-2">
             ${isApprove ? `
               <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1.5">Rol Comercial a Asignar</label>
+                <label class="block text-xs font-semibold text-slate-300 mb-1.5">Rol a Asignar</label>
                 <select id="admin-modal-role" class="w-full px-3.5 py-2.5 bg-aura-input border border-aura-border rounded-lg text-xs text-slate-100 focus:outline-none focus:border-blue-500">
-                  <option value="Solicitante" ${m.role === 'Solicitante' ? 'selected' : ''}>Solicitante Departamental</option>
-                  <option value="Gerente" ${m.role === 'Gerente' ? 'selected' : ''}>Gerente Aprobador (hasta $1,000 USD)</option>
-                  <option value="Director" ${m.role === 'Director' ? 'selected' : ''}>Director General (> $1,000 USD)</option>
-                  <option value="Compras" ${m.role === 'Compras' ? 'selected' : ''}>Compras & Adquisiciones</option>
+                  <option value="Solicitante" ${m.role === 'Solicitante' ? 'selected' : ''}>Solicitante</option>
+                  <option value="Gerente" ${m.role === 'Gerente' ? 'selected' : ''}>Gerente</option>
+                  <option value="Director" ${m.role === 'Director' ? 'selected' : ''}>Director</option>
+                  <option value="Compras" ${m.role === 'Compras' ? 'selected' : ''}>Compras</option>
                 </select>
               </div>
             ` : ''}
@@ -1850,7 +1810,7 @@ function renderModal() {
               ${code ? `<span class="text-[11px] font-mono text-slate-400">Código de respuesta HTTP: ${code}</span>` : ''}
             </div>
           </div>
-          <p class="text-xs text-slate-300 leading-relaxed">${message || 'Ha ocurrido un error inesperado al conectar con los servicios en AWS.'}</p>
+          <p class="text-xs text-slate-300 leading-relaxed">${message || 'Ha ocurrido un error inesperado al conectar con el servidor.'}</p>
           <div class="pt-3 border-t border-aura-border flex items-center justify-end gap-2">
             <button onclick="cerrarErrorModal()" class="px-3 py-1.5 rounded-lg border border-aura-border text-xs text-slate-300 hover:bg-slate-800 transition-colors">
               Cerrar
@@ -1877,7 +1837,7 @@ function renderModal() {
           <div class="text-center">
             <h3 class="text-sm font-bold text-white mb-1">¿Eliminar Proveedor?</h3>
             <p class="text-xs text-slate-400">
-              ¿Confirmas la baja de <strong class="text-white">${p ? p.nombre : state.proveedorToDelete}</strong> del catálogo oficial de DynamoDB?
+              ¿Confirmas la baja de <strong class="text-white">${p ? p.nombre : state.proveedorToDelete}</strong> del catálogo de proveedores?
             </p>
           </div>
           <div class="flex items-center gap-3 pt-2">
@@ -1988,7 +1948,7 @@ window.handleLoginFormSubmit = async function(e) {
   const password = passwordInput ? passwordInput.value : '';
 
   if (!email || !password) {
-    showToast('Ingresa correo y contraseña para autenticar con Amazon Cognito.', 'warning');
+    showToast('Ingresa tu correo y contraseña.', 'warning');
     return;
   }
 
@@ -1996,7 +1956,7 @@ window.handleLoginFormSubmit = async function(e) {
   const originalText = submitBtn ? submitBtn.innerHTML : '';
   if (submitBtn) {
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i><span>Validando en AWS...</span>';
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i><span>Iniciando sesión...</span>';
   }
 
   try {
@@ -2007,7 +1967,6 @@ window.handleLoginFormSubmit = async function(e) {
     state.currentRole = authUser.role;
     state.currentUser = authUser;
     state.currentView = authUser.isAdmin ? 'admin_usuarios' : 'dashboard';
-    showToast('Sesión validada exitosamente con Amazon Cognito.', 'info');
     render();
 
     // Sincronización de datos remotos según el rol
@@ -2049,7 +2008,7 @@ window.handleLoginFormSubmit = async function(e) {
 
 window.handleRecuperarSubmit = function(e) {
   if (e && typeof e.preventDefault === 'function') e.preventDefault();
-  showToast('Operación no disponible: El autoservicio de recuperación no está configurado en Cognito. Contacta al Administrador de Cuentas.', 'warning');
+  showToast('Operación no disponible: El autoservicio de recuperación no está configurado. Contacta al Administrador.', 'warning');
 };
 
 window.handleLogout = async function() {
@@ -2069,7 +2028,6 @@ window.handleLogout = async function() {
   state.borradoresRemotos = [];
   state.editingDraftId = null;
   state.currentView = 'login';
-  showToast('Sesión cerrada y revocada correctamente.', 'info');
   render();
 };
 
@@ -2436,14 +2394,14 @@ window.dictaminarSolicitud = async function(id, resultado, comentarioUsuario = n
     return;
   }
 
-  // Validación de monto: Gerente hasta $1,000; Director más de $1,000
+  // Validación de nivel de aprobación: Gerente hasta $1,000; Director más de $1,000
   if (state.currentRole === 'gerente' && s.esAltoMonto) {
-    showToast('Acceso Denegado: Solicitudes de alto monto (> $1,000 USD) corresponden a Dirección General.', 'warning');
+    showToast('Acceso Denegado: Esta solicitud corresponde al nivel de Dirección.', 'warning');
     if (state.inFlightOperations) state.inFlightOperations.delete(lockKey);
     return;
   }
   if (state.currentRole === 'director' && !s.esAltoMonto) {
-    showToast('Acceso Denegado: Solicitudes ordinarias (≤ $1,000 USD) corresponden a Gerencia.', 'warning');
+    showToast('Acceso Denegado: Esta solicitud corresponde al nivel de Gerencia.', 'warning');
     if (state.inFlightOperations) state.inFlightOperations.delete(lockKey);
     return;
   }
@@ -2481,7 +2439,7 @@ window.dictaminarSolicitud = async function(id, resultado, comentarioUsuario = n
         aprobador: currentUser,
         decidedBy: currentUser
       });
-      showToast(`Solicitud ${id} ${resultado.toUpperCase()} y registrada en AWS DynamoDB.`, resultado === 'aprobado' ? 'success' : 'warning');
+      showToast(`Solicitud ${id} ${resultado === 'aprobado' ? 'aprobada' : 'rechazada'} correctamente.`, resultado === 'aprobado' ? 'success' : 'warning');
       s.estado = resultado;
       s.status = decisionAws;
       s.fechaDictamen = 'Hoy';
@@ -2489,11 +2447,11 @@ window.dictaminarSolicitud = async function(id, resultado, comentarioUsuario = n
       s.comentariosGerente = comentarioFinal.trim();
     }
   } catch (err) {
-    console.warn(`[AURA] Falla al persistir dictamen en backend/AWS:`, err.message);
+    console.warn(`[AURA] Falla al persistir dictamen en backend:`, err.message);
     if (err.status === 409) {
       showToast(`Conflicto (HTTP 409): ${err.message}`, 'warning');
     } else {
-      showToast(`Error al registrar dictamen en AWS: ${err.message}`, 'error');
+      showToast(`Error al registrar dictamen: ${err.message}`, 'error');
     }
   } finally {
     // Tras éxito o conflicto 409, refrescar registro remoto, bandeja de aprobaciones y retirar acciones
@@ -2607,10 +2565,9 @@ window.actualizarItem = function(idx, campo, valor) {
 window.actualizarBannerTotal = function() {
   const form = state.nuevaSolicitudForm;
   const totalCalculado = form.items.reduce((acc, it) => acc + (Number(it.cantidad || 0) * Number(it.precio || 0)), 0);
-  const esAltoMonto = totalCalculado > 1000;
 
   const totalEl = document.getElementById('total-estimado-valor');
-  if (totalEl) totalEl.textContent = `$${totalCalculado.toFixed(2)}`;
+  if (totalEl) totalEl.textContent = formatearMoneda(totalCalculado);
 
   const bannerEl = document.getElementById('banner-politica-dictamen');
   const tituloEl = document.getElementById('banner-titulo');
@@ -2618,17 +2575,10 @@ window.actualizarBannerTotal = function() {
   const iconoEl = document.getElementById('banner-icono');
 
   if (bannerEl && tituloEl && subtituloEl && iconoEl) {
-    if (esAltoMonto) {
-      bannerEl.className = 'p-3.5 rounded-xl border flex items-center justify-between transition-colors bg-amber-500/10 border-amber-500/40 text-amber-300';
-      iconoEl.className = 'fa-solid fa-triangle-exclamation text-amber-400 text-base';
-      tituloEl.textContent = 'Solicitud de Alto Monto (> $1,000 USD)';
-      subtituloEl.textContent = 'Monto superior a $1,000: requiere dictamen exclusivo de Dirección General.';
-    } else {
-      bannerEl.className = 'p-3.5 rounded-xl border flex items-center justify-between transition-colors bg-emerald-500/10 border-emerald-500/40 text-emerald-300';
-      iconoEl.className = 'fa-solid fa-circle-check text-emerald-400 text-base';
-      tituloEl.textContent = 'Aprobación ordinaria de Gerencia (Hasta $1,000 USD)';
-      subtituloEl.textContent = 'Monto de hasta $1,000: aprobación directa de Gerencia.';
-    }
+    bannerEl.className = 'p-3.5 rounded-xl border flex items-center justify-between transition-colors bg-blue-500/10 border-blue-500/40 text-blue-300';
+    iconoEl.className = 'fa-solid fa-file-invoice text-blue-400 text-base';
+    tituloEl.textContent = 'Resumen de Requerimiento';
+    subtituloEl.textContent = 'El flujo de revisión y aprobación se asignará automáticamente de acuerdo a las políticas corporativas.';
   }
 };
 
@@ -2812,11 +2762,11 @@ window.guardarBorrador = async function() {
       const existingDraft = state.solicitudes.find(s => s.id === state.editingDraftId);
       const version = existingDraft ? (existingDraft.version || 1) : 1;
       res = await window.apiService.updateBorrador(state.editingDraftId, payloadBorrador, version);
-      showToast(`Borrador ${state.editingDraftId} actualizado exitosamente en DynamoDB.`, 'success');
+      showToast(`Borrador actualizado exitosamente.`, 'success');
     } else {
       res = await window.apiService.createBorrador(payloadBorrador);
       const draftId = (res && (res.borrador?.id || res.id || res.draftId)) || 'BR-OK';
-      showToast(`Borrador ${draftId} guardado exitosamente en AWS DynamoDB.`, 'success');
+      showToast(`Borrador guardado exitosamente.`, 'success');
     }
 
     state.editingDraftId = null;
@@ -2833,7 +2783,7 @@ window.guardarBorrador = async function() {
   } catch (err) {
     console.error('[AURA Guardar Borrador Error]', err);
     // Conservar formulario intacto para no perder datos del usuario
-    showToast('Error al guardar borrador en AWS: ' + err.message, 'warning');
+    showToast('Error al guardar borrador: ' + err.message, 'warning');
   }
 };
 
@@ -2867,7 +2817,7 @@ window.editarBorrador = function(id) {
   }
   const statusStr = String(s.status || s.estado || '').toUpperCase();
   if (statusStr === 'REGISTERING') {
-    showToast(`El borrador ${id} se encuentra en proceso de registro en AWS (REGISTERING) y no puede ser editado.`, 'warning');
+    showToast(`El borrador ${id} se encuentra en proceso de envío y no puede ser editado.`, 'warning');
     return;
   }
 
@@ -2928,10 +2878,10 @@ window.eliminarBorrador = async function(id, version) {
   const existing = state.solicitudes.find(s => s.id === id);
   const statusStr = String(existing?.status || existing?.estado || '').toUpperCase();
   if (statusStr === 'REGISTERING') {
-    showToast(`El documento ${id} está en proceso de registro en AWS (REGISTERING) y no puede ser eliminado.`, 'warning');
+    showToast(`El documento ${id} está en proceso de envío y no puede ser eliminado.`, 'warning');
     return;
   }
-  if (typeof confirm === 'function' && !confirm(`¿Estás seguro de eliminar permanentemente este borrador (${id}) de DynamoDB?`)) {
+  if (typeof confirm === 'function' && !confirm(`¿Estás seguro de eliminar permanentemente este borrador?`)) {
     return;
   }
   if (!window.apiService) {
@@ -2944,11 +2894,11 @@ window.eliminarBorrador = async function(id, version) {
     if (state.borradoresRemotos) {
       state.borradoresRemotos = state.borradoresRemotos.filter(b => (b.id || b.draftId) !== id);
     }
-    showToast(`Borrador ${id} eliminado exitosamente de DynamoDB.`, 'info');
+    showToast(`Borrador eliminado exitosamente.`, 'info');
     navigateTo('solicitudes');
   } catch (err) {
     console.error('[AURA Eliminar Borrador Error]', err);
-    showToast('Error al eliminar borrador en AWS: ' + err.message, 'warning');
+    showToast('Error al eliminar borrador: ' + err.message, 'warning');
   }
 };
 
@@ -2995,7 +2945,7 @@ window.enviarBorradorAFirma = async function(id) {
       state.selectedSolicitudId = reqId;
     }
 
-    showToast(`Borrador enviado a AWS Step Functions (${reqId}, HTTP 202). Registrando...`, 'success');
+    showToast(`Borrador enviado a revisión. Registrando...`, 'success');
     render();
 
     // Iniciar consulta de persistencia /api/solicitudes/:id/registro hasta PERSISTED/FAILED
@@ -3021,7 +2971,7 @@ window.verificarPersistenciaRegistro = async function(requestId, originalDraftId
       const res = await window.apiService.getSolicitudRegistro(requestId);
       const estado = res && (res.estado || res.status);
       if (estado === 'PERSISTED') {
-        showToast(`Solicitud ${requestId} persistida y registrada exitosamente en DynamoDB.`, 'success');
+        showToast(`Solicitud ${requestId} registrada exitosamente.`, 'success');
 
         // Actualizar el objeto localmente sin falso 404 conservando draftId
         const target = state.solicitudes.find(x => x.id === requestId || x.requestId === requestId || (originalDraftId && x.draftId === originalDraftId));
@@ -3054,7 +3004,7 @@ window.verificarPersistenciaRegistro = async function(requestId, originalDraftId
         return { success: true, estado: 'PERSISTED' };
       }
       if (estado === 'FAILED') {
-        showToast(`Falla en la persistencia de solicitud ${requestId} en DynamoDB.`, 'error');
+        showToast(`Falla en la persistencia de la solicitud ${requestId}.`, 'error');
         const target = state.solicitudes.find(x => x.id === requestId || x.requestId === requestId || (originalDraftId && x.draftId === originalDraftId));
         if (target) {
           target.status = 'FAILED';
@@ -3097,7 +3047,7 @@ window.handleCrearSolicitud = async function(e) {
   const originalBtnHtml = submitBtn ? submitBtn.innerHTML : '';
   if (submitBtn) {
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i><span>Iniciando en AWS...</span>';
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i><span>Enviando...</span>';
   }
 
   if (window.apiService) {
@@ -3205,7 +3155,7 @@ window.handleCrearSolicitud = async function(e) {
       });
 
       const nuevoId = res.requestId || `REQ-${Date.now()}`;
-      showToast(`Solicitud ${nuevoId} iniciada en AWS Step Functions (HTTP 202). Registrando...`, 'success');
+      showToast(`Solicitud ${nuevoId} enviada a revisión. Registrando...`, 'success');
 
       // Limpiar formulario reactivo
       state.nuevaSolicitudForm = {
@@ -3238,8 +3188,8 @@ window.handleCrearSolicitud = async function(e) {
       window.verificarPersistenciaRegistro(nuevoId);
       return;
     } catch (err) {
-      console.warn('[AURA] Error al enviar a Step Functions:', err.message);
-      showToast(`Error al iniciar en AWS Step Functions: ${err.message}`, 'warning');
+      console.warn('[AURA] Error al enviar a aprobación:', err.message);
+      showToast(`Error al enviar a aprobación: ${err.message}`, 'warning');
       return;
     } finally {
       if (submitBtn) {
@@ -3280,13 +3230,13 @@ window.ejecutarEliminarProveedor = async function() {
   if (window.apiService) {
     try {
       await window.apiService.deleteProveedor(id, version);
-      showToast(`Proveedor ${id} eliminado exitosamente de DynamoDB.`, 'info');
+      showToast(`Proveedor ${id} eliminado exitosamente.`, 'info');
       await window.recargarProveedoresApi();
       render();
       return;
     } catch (err) {
       console.error('[AURA Eliminar Proveedor Error]', err);
-      showToast('Error al eliminar proveedor en AWS: ' + err.message, 'warning');
+      showToast('Error al eliminar proveedor: ' + err.message, 'warning');
       return;
     }
   }
@@ -3322,17 +3272,17 @@ window.handleGuardarProveedor = async function(e, isEdit) {
         const p = state.proveedores.find(x => x.id === state.selectedProveedorId);
         const version = p ? (p.version || 1) : 1;
         await window.apiService.updateProveedor(state.selectedProveedorId, payload, version);
-        showToast('Proveedor actualizado en AWS DynamoDB.', 'success');
+        showToast('Proveedor actualizado exitosamente.', 'success');
       } else {
         await window.apiService.createProveedor(payload);
-        showToast('Proveedor creado exitosamente en AWS DynamoDB.', 'success');
+        showToast('Proveedor creado exitosamente.', 'success');
       }
       await window.recargarProveedoresApi();
       navigateTo('proveedores');
       return;
     } catch (err) {
       console.error('[AURA Guardar Proveedor Error]', err);
-      showToast('Error al persistir proveedor en AWS: ' + err.message, 'warning');
+      showToast('Error al guardar proveedor: ' + err.message, 'warning');
       return;
     }
   }
@@ -3356,7 +3306,7 @@ window.handleRegistroSubmit = async function(e) {
   const originalText = submitBtn ? submitBtn.innerHTML : '';
   if (submitBtn) {
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i><span>Enviando a AWS...</span>';
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i><span>Enviando...</span>';
   }
 
   try {

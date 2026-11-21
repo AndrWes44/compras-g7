@@ -319,14 +319,14 @@
     _getRoleTitle(role, isAdmin) {
       const roleLower = String(role || '').toLowerCase();
       if (isAdmin || roleLower === 'admin' || roleLower === 'administrador' || roleLower === 'administrador de cuentas') {
-        return 'Administrador de Cuentas';
+        return 'Administrador';
       }
       let title = '';
       switch (roleLower) {
-        case 'gerente': title = 'Gerente Aprobador (hasta $1,000)'; break;
-        case 'director': title = 'Director General / Financiero (> $1,000)'; break;
-        case 'compras': title = 'Compras & Adquisiciones'; break;
-        default: title = 'Solicitante Departamental'; break;
+        case 'gerente': title = 'Gerente'; break;
+        case 'director': title = 'Director'; break;
+        case 'compras': title = 'Compras'; break;
+        default: title = 'Solicitante'; break;
       }
       return title;
     }

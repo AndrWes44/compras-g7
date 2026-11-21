@@ -207,11 +207,11 @@ async function runFase11Tests() {
     assert.strictEqual(window.state.inFlightOperations.has('dictamen_REQ-409-TEST'), false, 'El lock debe liberarse en finally');
   });
 
-  // Test 5: Etiqueta "Administrador de Cuentas" y ocultación de botón "Rechazar" en cuentas APPROVED
-  await itAsync('5. Canonicalización de Administrador de Cuentas y ocultación de Rechazar en cuentas APPROVED', async () => {
-    assert.strictEqual(window.authService._getRoleTitle('administrador', true), 'Administrador de Cuentas');
-    assert.strictEqual(window.authService._getRoleTitle('admin', true), 'Administrador de Cuentas');
-    assert.strictEqual(window.authService._getRoleTitle('administrador', false), 'Administrador de Cuentas');
+  // Test 5: Etiqueta "Administrador" y ocultación de botón "Rechazar" en cuentas APPROVED
+  await itAsync('5. Canonicalización de Administrador y ocultación de Rechazar en cuentas APPROVED', async () => {
+    assert.strictEqual(window.authService._getRoleTitle('administrador', true), 'Administrador');
+    assert.strictEqual(window.authService._getRoleTitle('admin', true), 'Administrador');
+    assert.strictEqual(window.authService._getRoleTitle('administrador', false), 'Administrador');
 
     window.state.adminUsuarios = [
       { sub: 'sub-user-1', name: 'Usuario Aprobado', email: 'aprobado@empresa.com', status: 'APPROVED', assignedRole: 'Solicitante', version: 2 },

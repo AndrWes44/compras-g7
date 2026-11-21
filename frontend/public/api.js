@@ -95,7 +95,7 @@
               if (typeof window !== 'undefined' && typeof window.mostrarErrorModal === 'function') {
                 window.mostrarErrorModal({
                   title: 'Sesión Expirada o Inválida',
-                  message: 'Tu sesión no es válida ante el backend de AWS o ha expirado. Por favor ingresa nuevamente.',
+                  message: 'Tu sesión no es válida o ha expirado. Por favor ingresa nuevamente.',
                   code: 401,
                   actionText: 'Ir al Login',
                   onAction: "handleLogout()"
@@ -110,7 +110,7 @@
             if (typeof window !== 'undefined' && typeof window.mostrarErrorModal === 'function') {
               window.mostrarErrorModal({
                 title: 'Acceso No Autorizado',
-                message: 'No posees los privilegios requeridos en AWS para ejecutar esta operación.',
+                message: 'No posees los privilegios requeridos para ejecutar esta operación.',
                 code: 403,
                 actionText: 'Entendido',
                 onAction: 'cerrarErrorModal()'
@@ -130,7 +130,7 @@
         clearTimeout(timeoutId);
 
         if (err.name === 'AbortError') {
-          const timeoutErr = new Error('Tiempo de espera agotado al conectar con el servidor AWS.');
+          const timeoutErr = new Error('Tiempo de espera agotado al conectar con el servidor.');
           timeoutErr.status = 408;
           timeoutErr.isNetworkError = true;
           throw timeoutErr;
@@ -138,7 +138,7 @@
 
         if (!err.status) {
           err.isNetworkError = true;
-          err.message = 'No fue posible conectar con el servidor API en AWS (' + this.baseUrl + ').';
+          err.message = 'No fue posible conectar con el servidor (' + this.baseUrl + ').';
         }
 
         throw err;
