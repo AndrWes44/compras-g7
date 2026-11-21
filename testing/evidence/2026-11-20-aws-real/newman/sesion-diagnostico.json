@@ -1,0 +1,8 @@
+{
+  "fechaUTC": "2026-11-21T05:24:22.572Z",
+  "metodo": "POST",
+  "endpoint": "/api/auth/login",
+  "status": 200,
+  "tokenObtenido": true,
+  "nota": "Preparacion de sesion efimera; credenciales y tokens omitidos."
+}
