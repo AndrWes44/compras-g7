@@ -1,0 +1,291 @@
+{
+  "info": {
+    "name": "Compras G7 AWS real cierre",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Lecturas y comprobaciones publicas contra API real. No es QA_LOCAL. Los cambios de UI se documentan por separado. Variables sin secretos; la obtencion del access token ocurre fuera de la coleccion. Ningun script persiste credenciales."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": ""
+    },
+    {
+      "key": "authToken",
+      "value": ""
+    },
+    {
+      "key": "requestId",
+      "value": ""
+    },
+    {
+      "key": "draftId",
+      "value": ""
+    },
+    {
+      "key": "providerId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "01 Publicas",
+      "item": [
+        {
+          "name": "AWS salud",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/health",
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "pm.test('Servicio operativo',()=>pm.expect(pm.response.json().estado).to.eql('OK'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Identidad sin token rechazada",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/auth/me",
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401',()=>pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CORS origen frontend permitido",
+          "request": {
+            "method": "OPTIONS",
+            "url": "{{baseUrl}}/api/borradores",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "http://g7-dev-frontend-aura-021686096746.s3-website.us-east-2.amazonaws.com"
+              },
+              {
+                "key": "Access-Control-Request-Method",
+                "value": "PATCH"
+              },
+              {
+                "key": "Access-Control-Request-Headers",
+                "value": "authorization,content-type"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 204',()=>pm.response.to.have.status(204));",
+                  "pm.test('Origen exacto',()=>pm.expect(pm.response.headers.get('Access-Control-Allow-Origin')).to.eql(\"http://g7-dev-frontend-aura-021686096746.s3-website.us-east-2.amazonaws.com\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CORS origen ajeno rechazado",
+          "request": {
+            "method": "OPTIONS",
+            "url": "{{baseUrl}}/api/borradores",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "https://example.com"
+              },
+              {
+                "key": "Access-Control-Request-Method",
+                "value": "PATCH"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403',()=>pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 Lecturas propias Solicitante",
+      "item": [
+        {
+          "name": "Identidad real Solicitante",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/auth/me",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "pm.test('Rol verificado por API',()=>pm.expect(pm.response.json().usuario.roles).to.include('Solicitante'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Capacidades reales",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/capacidades",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Borrador propio despues del envio",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/borradores/{{draftId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "pm.test('ID original',()=>pm.expect(pm.response.json().borrador.id).to.eql(pm.variables.get('draftId')));",
+                  "pm.test('Conserva precio editado',()=>pm.expect(pm.response.json().borrador.amount).to.eql(30));",
+                  "const b=pm.response.json().borrador; if(b.requestId) pm.variables.set('requestId',b.requestId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Solicitud propia enviada",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/solicitudes/{{requestId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registro propio persistido",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/solicitudes/{{requestId}}/registro",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "pm.test('Persistencia AWS confirmada',()=>pm.expect(pm.response.json().estado).to.eql('PERSISTED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Proveedor QA desde catalogo",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/proveedores/{{providerId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "pm.test('ID proveedor propio',()=>pm.expect(pm.response.json().proveedor.id).to.eql(pm.variables.get('providerId')));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

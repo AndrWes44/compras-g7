@@ -1,0 +1,1017 @@
+{
+  "info": {
+    "name": "PROPUESTA FUTURA - Motor de aprobaciones (demo independiente)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "NO compatible con la API actual de compras-g7. Referencia para integrar el motor de aprobacion. Probada solamente en la demo independiente con SQLite."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:3000"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 Salud",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/health"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const compraResponse = pm.response.json();",
+              "pm.test('Servidor disponible', () => pm.expect(compraResponse.status).to.eql('ok'));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Crear 99999 centavos",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Dev-User",
+            "value": "solicitante"
+          }
+        ],
+        "url": "{{baseUrl}}/api/solicitudes",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"descripcion\": \"Licencias de desarrollo\",\n  \"proveedor\": \"Proveedor demo\",\n  \"items\": [\n    {\n      \"descripcion\": \"Licencia\",\n      \"cantidad\": 1,\n      \"precioUnitarioCentavos\": 99999\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "const compraResponse = pm.response.json();",
+              "pm.test('Total calculado', () => pm.expect(compraResponse.totalCentavos).to.eql(99999));",
+              "pm.test('Borrador', () => pm.expect(compraResponse.estado).to.eql('BORRADOR'));",
+              "if(pm.response.code === 201) pm.environment.set('solicitud999', compraResponse.id);",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Consultar 99999",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Dev-User",
+            "value": "solicitante"
+          }
+        ],
+        "url": "{{baseUrl}}/api/solicitudes/{{solicitud999}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const compraResponse = pm.response.json();",
+              "pm.test('Identificador', () => pm.expect(compraResponse.id).to.eql(pm.environment.get('solicitud999')));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Enviar 99999",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Dev-User",
+            "value": "solicitante"
+          }
+        ],
+        "url": "{{baseUrl}}/api/solicitudes/{{solicitud999}}/enviar",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const compraResponse = pm.response.json();",
+              "pm.test('Aprobador', () => pm.expect(compraResponse.aprobadorAsignado).to.eql('GERENTE_AREA'));",
+              "pm.test('En revision', () => pm.expect(compraResponse.estado).to.eql('EN_REVISION'));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Edicion bloqueada 99999",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Dev-User",
+            "value": "solicitante"
+          }
+        ],
+        "url": "{{baseUrl}}/api/solicitudes/{{solicitud999}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"descripcion\": \"Tarde\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+              "const compraResponse = pm.response.json();",
+              "pm.test('Transicion invalida', () => pm.expect(compraResponse.error.code).to.eql('TRANSICION_INVALIDA'));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Usuario sin autoridad 99999",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Dev-User",
+            "value": "otro"
+          }
+        ],
+        "url": "{{baseUrl}}/api/solicitudes/{{solicitud999}}/decisiones",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"decision\": \"APROBADA\",\n  \"comentario\": \"Intruso\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "const compraResponse = pm.response.json();",
+              "pm.test('Acceso denegado', () => pm.expect(compraResponse.error.code).to.eql('NO_AUTORIZADO'));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dictamen 99999",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Dev-User",
+            "value": "gerente"
+          }
+        ],
+        "url": "{{baseUrl}}/api/solicitudes/{{solicitud999}}/decisiones",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"decision\": \"APROBADA\",\n  \"comentario\": \"Dictamen de demostracion\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const compraResponse = pm.response.json();",
+              "pm.test('Estado final', () => pm.expect(compraResponse.estado).to.eql('APROBADA'));",
+              "pm.test('Historial', () => pm.expect(compraResponse.historial).to.have.lengthOf(3));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Decision repetida 99999",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Dev-User",
+            "value": "gerente"
+          }
+        ],
+        "url": "{{baseUrl}}/api/solicitudes/{{solicitud999}}/decisiones",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"decision\": \"APROBADA\",\n  \"comentario\": \"Repeticion\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+              "const compraResponse = pm.response.json();",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Crear 100000 centavos",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Dev-User",
+            "value": "solicitante"
+          }
+        ],
+        "url": "{{baseUrl}}/api/solicitudes",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"descripcion\": \"Licencias de desarrollo\",\n  \"proveedor\": \"Proveedor demo\",\n  \"items\": [\n    {\n      \"descripcion\": \"Licencia\",\n      \"cantidad\": 1,\n      \"precioUnitarioCentavos\": 100000\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "const compraResponse = pm.response.json();",
+              "pm.test('Total calculado', () => pm.expect(compraResponse.totalCentavos).to.eql(100000));",
+              "pm.test('Borrador', () => pm.expect(compraResponse.estado).to.eql('BORRADOR'));",
+              "if(pm.response.code === 201) pm.environment.set('solicitud1000', compraResponse.id);",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Consultar 100000",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Dev-User",
+            "value": "solicitante"
+          }
+        ],
+        "url": "{{baseUrl}}/api/solicitudes/{{solicitud1000}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const compraResponse = pm.response.json();",
+              "pm.test('Identificador', () => pm.expect(compraResponse.id).to.eql(pm.environment.get('solicitud1000')));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Enviar 100000",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Dev-User",
+            "value": "solicitante"
+          }
+        ],
+        "url": "{{baseUrl}}/api/solicitudes/{{solicitud1000}}/enviar",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const compraResponse = pm.response.json();",
+              "pm.test('Aprobador', () => pm.expect(compraResponse.aprobadorAsignado).to.eql('GERENTE_AREA'));",
+              "pm.test('En revision', () => pm.expect(compraResponse.estado).to.eql('EN_REVISION'));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Edicion bloqueada 100000",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Dev-User",
+            "value": "solicitante"
+          }
+        ],
+        "url": "{{baseUrl}}/api/solicitudes/{{solicitud1000}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"descripcion\": \"Tarde\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+              "const compraResponse = pm.response.json();",
+              "pm.test('Transicion invalida', () => pm.expect(compraResponse.error.code).to.eql('TRANSICION_INVALIDA'));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Usuario sin autoridad 100000",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Dev-User",
+            "value": "otro"
+          }
+        ],
+        "url": "{{baseUrl}}/api/solicitudes/{{solicitud1000}}/decisiones",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"decision\": \"RECHAZADA\",\n  \"comentario\": \"Intruso\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "const compraResponse = pm.response.json();",
+              "pm.test('Acceso denegado', () => pm.expect(compraResponse.error.code).to.eql('NO_AUTORIZADO'));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dictamen 100000",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Dev-User",
+            "value": "gerente"
+          }
+        ],
+        "url": "{{baseUrl}}/api/solicitudes/{{solicitud1000}}/decisiones",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"decision\": \"RECHAZADA\",\n  \"comentario\": \"Dictamen de demostracion\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const compraResponse = pm.response.json();",
+              "pm.test('Estado final', () => pm.expect(compraResponse.estado).to.eql('RECHAZADA'));",
+              "pm.test('Historial', () => pm.expect(compraResponse.historial).to.have.lengthOf(3));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Decision repetida 100000",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Dev-User",
+            "value": "gerente"
+          }
+        ],
+        "url": "{{baseUrl}}/api/solicitudes/{{solicitud1000}}/decisiones",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"decision\": \"RECHAZADA\",\n  \"comentario\": \"Repeticion\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+              "const compraResponse = pm.response.json();",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Crear 100001 centavos",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Dev-User",
+            "value": "solicitante"
+          }
+        ],
+        "url": "{{baseUrl}}/api/solicitudes",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"descripcion\": \"Licencias de desarrollo\",\n  \"proveedor\": \"Proveedor demo\",\n  \"items\": [\n    {\n      \"descripcion\": \"Licencia\",\n      \"cantidad\": 1,\n      \"precioUnitarioCentavos\": 100001\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "const compraResponse = pm.response.json();",
+              "pm.test('Total calculado', () => pm.expect(compraResponse.totalCentavos).to.eql(100001));",
+              "pm.test('Borrador', () => pm.expect(compraResponse.estado).to.eql('BORRADOR'));",
+              "if(pm.response.code === 201) pm.environment.set('solicitudId', compraResponse.id);",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Consultar 100001",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Dev-User",
+            "value": "solicitante"
+          }
+        ],
+        "url": "{{baseUrl}}/api/solicitudes/{{solicitudId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const compraResponse = pm.response.json();",
+              "pm.test('Identificador', () => pm.expect(compraResponse.id).to.eql(pm.environment.get('solicitudId')));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Enviar 100001",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Dev-User",
+            "value": "solicitante"
+          }
+        ],
+        "url": "{{baseUrl}}/api/solicitudes/{{solicitudId}}/enviar",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const compraResponse = pm.response.json();",
+              "pm.test('Aprobador', () => pm.expect(compraResponse.aprobadorAsignado).to.eql('DIRECTOR'));",
+              "pm.test('En revision', () => pm.expect(compraResponse.estado).to.eql('EN_REVISION'));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Edicion bloqueada 100001",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Dev-User",
+            "value": "solicitante"
+          }
+        ],
+        "url": "{{baseUrl}}/api/solicitudes/{{solicitudId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"descripcion\": \"Tarde\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+              "const compraResponse = pm.response.json();",
+              "pm.test('Transicion invalida', () => pm.expect(compraResponse.error.code).to.eql('TRANSICION_INVALIDA'));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Usuario sin autoridad 100001",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Dev-User",
+            "value": "otro"
+          }
+        ],
+        "url": "{{baseUrl}}/api/solicitudes/{{solicitudId}}/decisiones",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"decision\": \"APROBADA\",\n  \"comentario\": \"Intruso\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "const compraResponse = pm.response.json();",
+              "pm.test('Acceso denegado', () => pm.expect(compraResponse.error.code).to.eql('NO_AUTORIZADO'));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dictamen 100001",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Dev-User",
+            "value": "director"
+          }
+        ],
+        "url": "{{baseUrl}}/api/solicitudes/{{solicitudId}}/decisiones",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"decision\": \"APROBADA\",\n  \"comentario\": \"Dictamen de demostracion\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const compraResponse = pm.response.json();",
+              "pm.test('Estado final', () => pm.expect(compraResponse.estado).to.eql('APROBADA'));",
+              "pm.test('Historial', () => pm.expect(compraResponse.historial).to.have.lengthOf(3));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Decision repetida 100001",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Dev-User",
+            "value": "director"
+          }
+        ],
+        "url": "{{baseUrl}}/api/solicitudes/{{solicitudId}}/decisiones",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"decision\": \"APROBADA\",\n  \"comentario\": \"Repeticion\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+              "const compraResponse = pm.response.json();",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Listado",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Dev-User",
+            "value": "solicitante"
+          }
+        ],
+        "url": "{{baseUrl}}/api/solicitudes?limit=20"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const compraResponse = pm.response.json();",
+              "pm.test('Lista', () => pm.expect(compraResponse.items).to.be.an('array'));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Monto invalido",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Dev-User",
+            "value": "solicitante"
+          }
+        ],
+        "url": "{{baseUrl}}/api/solicitudes",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"descripcion\": \"Licencias de desarrollo\",\n  \"proveedor\": \"Proveedor demo\",\n  \"items\": [\n    {\n      \"descripcion\": \"Licencia\",\n      \"cantidad\": 1,\n      \"precioUnitarioCentavos\": -1\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "const compraResponse = pm.response.json();",
+              "pm.test('Validacion', () => pm.expect(compraResponse.error.code).to.eql('VALIDACION'));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Identidad ausente",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/solicitudes"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "const compraResponse = pm.response.json();",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Solicitud inexistente",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Dev-User",
+            "value": "solicitante"
+          }
+        ],
+        "url": "{{baseUrl}}/api/solicitudes/no-existe"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "const compraResponse = pm.response.json();",
+              "})();"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

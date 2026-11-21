@@ -1,0 +1,164 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'Stack g7-dev-step-functions: Orquestación de registro y asignación jerárquica de solicitudes'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: 'g7-dev'
+    Description: 'Prefijo identificador del ambiente'
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Timeout: 20
+    MemorySize: 256
+    Environment:
+      Variables:
+        TABLE_NAME: !Sub '${Environment}-solicitudes'
+        NODE_OPTIONS: '--enable-source-maps'
+
+Resources:
+  # ===================================================================
+  # 1. ROL IAM PARA FUNCIONES LAMBDA DE LA ORQUESTACIÓN
+  # ===================================================================
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${Environment}-lambda-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub '${Environment}-lambda-policy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: AllowCloudWatchLogs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${Environment}-*'
+              - Sid: AllowDynamoDBTableCRUD
+                Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:Query
+                Resource: !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Environment}-*'
+
+  # ===================================================================
+  # 2. ROL IAM PARA EL BACKEND EXPRESS (EC2 / Lambda / App Runner)
+  # ===================================================================
+  BackendApiRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${Environment}-backend-api-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+                - ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub '${Environment}-backend-policy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: AllowDynamoDBOperations
+                Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                Resource: !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Environment}-*'
+              - Sid: AllowStepFunctionsExecution
+                Effect: Allow
+                Action:
+                  - states:StartExecution
+                  - states:DescribeExecution
+                  - states:GetExecutionHistory
+                Resource:
+                  - !Sub 'arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${Environment}-approval-state-machine'
+                  - !Sub 'arn:aws:states:${AWS::Region}:${AWS::AccountId}:execution:${Environment}-approval-state-machine:*'
+
+  # ===================================================================
+  # 3. FUNCIONES LAMBDA
+  # ===================================================================
+  StartWorkflowFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-start-workflow'
+      CodeUri: ../lambdas/start-workflow/
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Description: 'Persiste la solicitud inicial en estado PENDING con articulos y requiereAprobacionDe'
+
+  EvaluateAmountFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-evaluate-amount'
+      CodeUri: ../lambdas/evaluate-amount/
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Description: 'Evalua monto (<=1000 Gerente, >1000 Director) y finaliza para decision humana'
+
+  # ===================================================================
+  # 4. ROL IAM PARA STEP FUNCTIONS
+  # ===================================================================
+  StepFunctionExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${Environment}-sfn-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: states.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub '${Environment}-sfn-invoke-policy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource:
+                  - !GetAtt StartWorkflowFunction.Arn
+                  - !GetAtt EvaluateAmountFunction.Arn
+
+  # ===================================================================
+  # 5. STEP FUNCTIONS: ORQUESTADOR HUMANO (FINALIZA EN PENDING)
+  # ===================================================================
+  ApprovalStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Name: !Sub '${Environment}-approval-state-machine'
+      DefinitionUri: state_machine.asl.json
+      DefinitionSubstitutions:
+        StartWorkflowFunctionArn: !GetAtt StartWorkflowFunction.Arn
+        EvaluateAmountFunctionArn: !GetAtt EvaluateAmountFunction.Arn
+      Role: !GetAtt StepFunctionExecutionRole.Arn
+
+Outputs:
+  StateMachineArn:
+    Description: 'ARN de Step Functions para invocar desde Backend'
+    Value: !Ref ApprovalStateMachine
+  BackendApiRoleArn:
+    Description: 'Rol IAM para producción del Backend Express sin claves permanentes'
+    Value: !GetAtt BackendApiRole.Arn

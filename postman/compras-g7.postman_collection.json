@@ -1,0 +1,614 @@
+{
+  "info": {
+    "name": "Compras G7 - API actual",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Backend del equipo: monto en dolares y estado PENDING. Requiere DynamoDB Local, tabla g7-dev-solicitudes y backend Grupo 7 activo."
+  },
+  "item": [
+    {
+      "name": "01 Salud del backend Grupo 7",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/health",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+              "const result=pm.response.json();",
+              "pm.test('Backend correcto',()=>pm.expect(result.estado).to.eql('OK'));",
+              "pm.test('Grupo 7',()=>pm.expect(result.mensaje).to.include('Grupo 7'));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Crear $999.99",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/solicitudes",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"descripcion\": \"Solicitud Postman G7\",\n  \"solicitante\": \"Diego - pruebas\",\n  \"departamento\": \"Computo\",\n  \"monto\": 999.99\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 201',()=>pm.response.to.have.status(201));",
+              "const result=pm.response.json();",
+              "pm.test('Monto almacenado',()=>pm.expect(result.solicitud.monto).to.eql(999.99));",
+              "pm.test('Estado PENDING',()=>pm.expect(result.solicitud.estado).to.eql('PENDING'));",
+              "pm.test('requestId',()=>pm.expect(result.solicitud.requestId).to.be.a('string').and.not.empty);",
+              "if(pm.response.code===201)pm.environment.set('requestId',result.solicitud.requestId);",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Consultar listado despues de $999.99",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/solicitudes",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+              "const result=pm.response.json();",
+              "pm.test('Listado',()=>pm.expect(result.solicitudes).to.be.an('array'));",
+              "pm.test('Incluye creada',()=>pm.expect(result.solicitudes.some(s=>s.requestId===pm.environment.get('requestId'))).to.eql(true));",
+              "pm.test('Total consistente',()=>pm.expect(result.total).to.eql(result.solicitudes.length));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Crear $1000",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/solicitudes",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"descripcion\": \"Solicitud Postman G7\",\n  \"solicitante\": \"Diego - pruebas\",\n  \"departamento\": \"Computo\",\n  \"monto\": 1000\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 201',()=>pm.response.to.have.status(201));",
+              "const result=pm.response.json();",
+              "pm.test('Monto almacenado',()=>pm.expect(result.solicitud.monto).to.eql(1000));",
+              "pm.test('Estado PENDING',()=>pm.expect(result.solicitud.estado).to.eql('PENDING'));",
+              "pm.test('requestId',()=>pm.expect(result.solicitud.requestId).to.be.a('string').and.not.empty);",
+              "if(pm.response.code===201)pm.environment.set('requestId',result.solicitud.requestId);",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Consultar listado despues de $1000",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/solicitudes",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+              "const result=pm.response.json();",
+              "pm.test('Listado',()=>pm.expect(result.solicitudes).to.be.an('array'));",
+              "pm.test('Incluye creada',()=>pm.expect(result.solicitudes.some(s=>s.requestId===pm.environment.get('requestId'))).to.eql(true));",
+              "pm.test('Total consistente',()=>pm.expect(result.total).to.eql(result.solicitudes.length));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Crear $1000.01",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/solicitudes",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"descripcion\": \"Solicitud Postman G7\",\n  \"solicitante\": \"Diego - pruebas\",\n  \"departamento\": \"Computo\",\n  \"monto\": 1000.01\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 201',()=>pm.response.to.have.status(201));",
+              "const result=pm.response.json();",
+              "pm.test('Monto almacenado',()=>pm.expect(result.solicitud.monto).to.eql(1000.01));",
+              "pm.test('Estado PENDING',()=>pm.expect(result.solicitud.estado).to.eql('PENDING'));",
+              "pm.test('requestId',()=>pm.expect(result.solicitud.requestId).to.be.a('string').and.not.empty);",
+              "if(pm.response.code===201)pm.environment.set('requestId',result.solicitud.requestId);",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Consultar listado despues de $1000.01",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/solicitudes",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+              "const result=pm.response.json();",
+              "pm.test('Listado',()=>pm.expect(result.solicitudes).to.be.an('array'));",
+              "pm.test('Incluye creada',()=>pm.expect(result.solicitudes.some(s=>s.requestId===pm.environment.get('requestId'))).to.eql(true));",
+              "pm.test('Total consistente',()=>pm.expect(result.total).to.eql(result.solicitudes.length));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rechazar descripcion=vacio",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/solicitudes",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"descripcion\": \"\",\n  \"solicitante\": \"Diego - pruebas\",\n  \"departamento\": \"Computo\",\n  \"monto\": 1\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 400',()=>pm.response.to.have.status(400));",
+              "const result=pm.response.json();",
+              "pm.test('Mensaje de validacion',()=>pm.expect(result.mensaje).to.include('inválidos'));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rechazar descripcion=null",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/solicitudes",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"descripcion\": null,\n  \"solicitante\": \"Diego - pruebas\",\n  \"departamento\": \"Computo\",\n  \"monto\": 1\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 400',()=>pm.response.to.have.status(400));",
+              "const result=pm.response.json();",
+              "pm.test('Mensaje de validacion',()=>pm.expect(result.mensaje).to.include('inválidos'));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rechazar solicitante=vacio",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/solicitudes",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"descripcion\": \"Solicitud Postman G7\",\n  \"solicitante\": \"\",\n  \"departamento\": \"Computo\",\n  \"monto\": 1\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 400',()=>pm.response.to.have.status(400));",
+              "const result=pm.response.json();",
+              "pm.test('Mensaje de validacion',()=>pm.expect(result.mensaje).to.include('inválidos'));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rechazar solicitante=null",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/solicitudes",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"descripcion\": \"Solicitud Postman G7\",\n  \"solicitante\": null,\n  \"departamento\": \"Computo\",\n  \"monto\": 1\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 400',()=>pm.response.to.have.status(400));",
+              "const result=pm.response.json();",
+              "pm.test('Mensaje de validacion',()=>pm.expect(result.mensaje).to.include('inválidos'));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rechazar departamento=vacio",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/solicitudes",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"descripcion\": \"Solicitud Postman G7\",\n  \"solicitante\": \"Diego - pruebas\",\n  \"departamento\": \"\",\n  \"monto\": 1\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 400',()=>pm.response.to.have.status(400));",
+              "const result=pm.response.json();",
+              "pm.test('Mensaje de validacion',()=>pm.expect(result.mensaje).to.include('inválidos'));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rechazar departamento=null",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/solicitudes",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"descripcion\": \"Solicitud Postman G7\",\n  \"solicitante\": \"Diego - pruebas\",\n  \"departamento\": null,\n  \"monto\": 1\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 400',()=>pm.response.to.have.status(400));",
+              "const result=pm.response.json();",
+              "pm.test('Mensaje de validacion',()=>pm.expect(result.mensaje).to.include('inválidos'));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rechazar monto 0",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/solicitudes",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"descripcion\": \"Solicitud Postman G7\",\n  \"solicitante\": \"Diego - pruebas\",\n  \"departamento\": \"Computo\",\n  \"monto\": 0\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 400',()=>pm.response.to.have.status(400));",
+              "const result=pm.response.json();",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rechazar monto -1",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/solicitudes",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"descripcion\": \"Solicitud Postman G7\",\n  \"solicitante\": \"Diego - pruebas\",\n  \"departamento\": \"Computo\",\n  \"monto\": -1\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 400',()=>pm.response.to.have.status(400));",
+              "const result=pm.response.json();",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rechazar monto \"100\"",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/solicitudes",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"descripcion\": \"Solicitud Postman G7\",\n  \"solicitante\": \"Diego - pruebas\",\n  \"departamento\": \"Computo\",\n  \"monto\": \"100\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 400',()=>pm.response.to.have.status(400));",
+              "const result=pm.response.json();",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rechazar monto null",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/solicitudes",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"descripcion\": \"Solicitud Postman G7\",\n  \"solicitante\": \"Diego - pruebas\",\n  \"departamento\": \"Computo\",\n  \"monto\": null\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 400',()=>pm.response.to.have.status(400));",
+              "const result=pm.response.json();",
+              "})();"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "Comment": "Flujo Serverless de Registro y Asignacion Jerarquica de Solicitudes - Grupo 7 (g7-dev)",
+  "StartAt": "ValidateAndInitWorkflow",
+  "States": {
+    "ValidateAndInitWorkflow": {
+      "Type": "Task",
+      "Resource": "${StartWorkflowFunctionArn}",
+      "Comment": "Valida la solicitud e inserta el registro inicial en DynamoDB en estado PENDING con condicion de no-sobrescritura",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.errorInfo",
+          "Next": "HandleWorkflowError"
+        }
+      ],
+      "Next": "EvaluateAmountAndRole"
+    },
+
+    "EvaluateAmountAndRole": {
+      "Type": "Task",
+      "Resource": "${EvaluateAmountFunctionArn}",
+      "Comment": "Evalua el monto y clasifica si requiere aprobacion humana de Gerente (<= 1000) o Director (> 1000)",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 2,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.errorInfo",
+          "Next": "HandleWorkflowError"
+        }
+      ],
+      "End": true
+    },
+
+    "HandleWorkflowError": {
+      "Type": "Pass",
+      "Parameters": {
+        "status": "FAILED",
+        "errorDetails.$": "$.errorInfo",
+        "message": "Fallo en la ejecucion del flujo inicial de solicitudes g7-dev"
+      },
+      "End": true
+    }
+  }
+}
