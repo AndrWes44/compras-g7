@@ -10,6 +10,7 @@ const state = window.state = {
   currentRole: null, // 'solicitante' | 'gerente' | 'director' | 'compras' | 'admin'
   currentUser: null, // Objeto de sesión oficial autenticado en Amazon Cognito
   currentView: 'login', // 'login' | 'dashboard' | 'solicitudes' | 'nueva_solicitud' | 'aprobaciones' | 'proveedores' | 'proveedor_nuevo' | 'proveedor_editar' | 'detalle_solicitud' | 'recuperar_password' | 'tokens' | 'admin_usuarios'
+  previousView: null,
   activeFilterCategoria: 'Todos',
   loginCreds: { email: '', password: '' },
 
@@ -1296,6 +1297,14 @@ function renderDetalleSolicitud() {
   const isDirector = state.currentRole === 'director';
   const canDictaminar = ((isGerente && !item?.esAltoMonto) || (isDirector && item?.esAltoMonto)) && (item?.status === 'PENDING' || (!item?.status && item?.estado === 'en_revision')) && !item?.isLegacyOrReadOnly;
 
+  const backView = state.previousView || 'solicitudes';
+  const backLabelMap = {
+    dashboard: 'Volver al Dashboard',
+    aprobaciones: 'Volver a Aprobaciones',
+    solicitudes: 'Volver a Solicitudes'
+  };
+  const backLabel = backLabelMap[backView] || 'Volver a Solicitudes';
+
   if (!item) {
     return `
       <div class="max-w-xl mx-auto my-12 bg-aura-card border border-aura-border rounded-2xl p-8 text-center space-y-4 shadow-2xl">
@@ -1306,9 +1315,9 @@ function renderDetalleSolicitud() {
           <h3 class="text-base font-bold text-white mb-1">Solicitud no encontrada (404)</h3>
           <p class="text-xs text-slate-400">El identificador <strong class="text-white">${state.selectedSolicitudId}</strong> no fue encontrado o fue eliminado.</p>
         </div>
-        <button onclick="navigateTo('solicitudes')" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg shadow transition-all inline-flex items-center gap-2">
+        <button onclick="navigateTo('${backView}')" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg shadow transition-all inline-flex items-center gap-2">
           <i class="fa-solid fa-arrow-left text-[10px]"></i>
-          <span>Regresar al Kanban</span>
+          <span>${backLabel}</span>
         </button>
       </div>
     `;
@@ -1320,9 +1329,9 @@ function renderDetalleSolicitud() {
   return `
     <div class="max-w-4xl mx-auto space-y-6">
       <div class="flex items-center justify-between">
-        <button onclick="navigateTo('solicitudes')" class="px-3 py-1.5 rounded-lg border border-aura-border text-xs text-slate-300 hover:bg-slate-800 transition-colors flex items-center gap-1.5">
+        <button onclick="navigateTo('${backView}')" class="px-3 py-1.5 rounded-lg border border-aura-border text-xs text-slate-300 hover:bg-slate-800 transition-colors flex items-center gap-1.5">
           <i class="fa-solid fa-arrow-left text-[10px]"></i>
-          <span>Volver al Tablero Kanban</span>
+          <span>${backLabel}</span>
         </button>
 
         <div class="flex items-center gap-2">
@@ -2252,6 +2261,9 @@ window.recargarAprobacionesApi = async function(cursor = null) {
 };
 
 window.verDetalleSolicitud = async function(id) {
+  if (state.currentView && state.currentView !== 'detalle_solicitud') {
+    state.previousView = state.currentView;
+  }
   state.selectedSolicitudId = id;
   state.currentView = 'detalle_solicitud';
   render();
