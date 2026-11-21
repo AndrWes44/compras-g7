@@ -1,0 +1,1223 @@
+{
+  "info": {
+    "name": "AURA AWS - QA autenticado",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Ejecutar en orden con cuentas QA. Crea proveedor y compra de prueba; anula la compra al terminar. No contiene credenciales. Usar environment privado con qaPassword por rol; no publicar tokens ni contrasenas."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://6pkbutuqre.execute-api.us-east-2.amazonaws.com"
+    },
+    {
+      "key": "qaRun",
+      "value": "{{$timestamp}}"
+    },
+    {
+      "key": "qaPasswordSolicitante",
+      "value": ""
+    },
+    {
+      "key": "qaPasswordGerente",
+      "value": ""
+    },
+    {
+      "key": "qaPasswordDirector",
+      "value": ""
+    },
+    {
+      "key": "qaPasswordCompras",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "01. Login Solicitante",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"solicitante@g7.com\", \"password\": \"{{qaPasswordSolicitante}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "if(pm.response.code===200) pm.collectionVariables.set(\"qaTokenSolicitante\",pm.response.json().tokens.accessToken);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02. Login Gerente",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"gerente@g7.com\", \"password\": \"{{qaPasswordGerente}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "if(pm.response.code===200) pm.collectionVariables.set(\"qaTokenGerente\",pm.response.json().tokens.accessToken);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03. Login Director",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"director@g7.com\", \"password\": \"{{qaPasswordDirector}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "if(pm.response.code===200) pm.collectionVariables.set(\"qaTokenDirector\",pm.response.json().tokens.accessToken);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04. Login Compras",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"compras@g7.com\", \"password\": \"{{qaPasswordCompras}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "if(pm.response.code===200) pm.collectionVariables.set(\"qaTokenCompras\",pm.response.json().tokens.accessToken);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05. Identidad Solicitante",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/auth/me",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenSolicitante}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "pm.test(\"Rol correcto\",()=>pm.expect(JSON.stringify(pm.response.json())).to.include(\"Solicitante\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06. Identidad Gerente",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/auth/me",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenGerente}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "pm.test(\"Rol correcto\",()=>pm.expect(JSON.stringify(pm.response.json())).to.include(\"Gerente\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07. Identidad Director",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/auth/me",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenDirector}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "pm.test(\"Rol correcto\",()=>pm.expect(JSON.stringify(pm.response.json())).to.include(\"Director\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08. Identidad Compras",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/auth/me",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenCompras}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "pm.test(\"Rol correcto\",()=>pm.expect(JSON.stringify(pm.response.json())).to.include(\"Compras\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09. Contrasena incorrecta cuenta existente",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"solicitante@g7.com\", \"password\": \"QA-incorrecta-no-valida\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 401\",()=>pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Borradores bloqueados para Gerente",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/borradores",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenGerente}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 403\",()=>pm.response.to.have.status(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. Borradores bloqueados para Director",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/borradores",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenDirector}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 403\",()=>pm.response.to.have.status(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12. Borradores bloqueados para Compras",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/borradores",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenCompras}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 403\",()=>pm.response.to.have.status(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13. Administracion bloqueada a Solicitante",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/admin/usuarios",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenSolicitante}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 403\",()=>pm.response.to.have.status(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14. Bandeja Gerente",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/aprobaciones",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenGerente}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15. Bandeja Director",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/aprobaciones",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenDirector}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "16. Catalogo resumen Solicitante",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/proveedores",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenSolicitante}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "17. Crear proveedor exclusivo QA",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/proveedores",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenCompras}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\": \"QA-Postman {{qaRun}} proveedor\", \"status\": \"ACTIVE\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 201\",()=>pm.response.to.have.status(201));",
+              "if(pm.response.code===201) pm.collectionVariables.set(\"qaProviderId\",pm.response.json().proveedor.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18. Crear borrador QA incompleto",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/borradores",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenSolicitante}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"description\": \"QA-Postman {{qaRun}} Crear borrador QA incompleto\", \"department\": \"DEP-TI\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 201\",()=>pm.response.to.have.status(201));",
+              "if(pm.response.code===201) pm.collectionVariables.set(\"qaDraftId\",pm.response.json().borrador.id);",
+              "if(pm.response.code<300 && pm.response.json().borrador) pm.collectionVariables.set(\"qaVersion\",pm.response.json().borrador.version);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "19. Recuperar borrador propio",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/borradores/{{qaDraftId}}",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenSolicitante}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "if(pm.response.code<300 && pm.response.json().borrador) pm.collectionVariables.set(\"qaVersion\",pm.response.json().borrador.version);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "20. Lectura borrador ajeno por Gerente",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/borradores/{{qaDraftId}}",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenGerente}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 403\",()=>pm.response.to.have.status(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "21. Lectura borrador ajeno por Director",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/borradores/{{qaDraftId}}",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenDirector}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 403\",()=>pm.response.to.have.status(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "22. Lectura borrador ajeno por Compras",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/borradores/{{qaDraftId}}",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenCompras}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 403\",()=>pm.response.to.have.status(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "23. PATCH version vigente",
+      "request": {
+        "method": "PATCH",
+        "url": "{{baseUrl}}/api/borradores/{{qaDraftId}}",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenSolicitante}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"version\": {{qaVersion}}, \"description\": \"QA-Postman {{qaRun}} PATCH version vigente\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "if(pm.response.code<300 && pm.response.json().borrador) pm.collectionVariables.set(\"qaVersion\",pm.response.json().borrador.version);"
+            ]
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.set(\"qaOldVersion\",pm.collectionVariables.get(\"qaVersion\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "24. PATCH version anterior conflicto",
+      "request": {
+        "method": "PATCH",
+        "url": "{{baseUrl}}/api/borradores/{{qaDraftId}}",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenSolicitante}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"version\": {{qaOldVersion}}, \"description\": \"NO DEBE GUARDARSE\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 409\",()=>pm.response.to.have.status(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "25. Segundo PATCH version incrementada",
+      "request": {
+        "method": "PATCH",
+        "url": "{{baseUrl}}/api/borradores/{{qaDraftId}}",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenSolicitante}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"version\": {{qaVersion}}, \"department\": \"DEP-QA\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "if(pm.response.code<300 && pm.response.json().borrador) pm.collectionVariables.set(\"qaVersion\",pm.response.json().borrador.version);",
+              "pm.test(\"Version incrementada\",()=>pm.expect(pm.response.json().borrador.version).to.be.above(Number(pm.collectionVariables.get(\"qaOldVersion\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "26. Persistencia despues de PATCH",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/borradores/{{qaDraftId}}",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenSolicitante}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "if(pm.response.code<300 && pm.response.json().borrador) pm.collectionVariables.set(\"qaVersion\",pm.response.json().borrador.version);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "27. Completar borrador con precios numericos",
+      "request": {
+        "method": "PATCH",
+        "url": "{{baseUrl}}/api/borradores/{{qaDraftId}}",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenSolicitante}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"version\": {{qaVersion}}, \"description\": \"QA-Postman {{qaRun}} Completar borrador con precios numericos\", \"department\": \"DEP-QA\", \"proveedorId\": \"{{qaProviderId}}\", \"amount\": 25, \"articulos\": [{\"nombre\": \"Articulo QA sin compra real\", \"cantidad\": 1, \"precioUnitario\": 25}]}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "if(pm.response.code<300 && pm.response.json().borrador) pm.collectionVariables.set(\"qaVersion\",pm.response.json().borrador.version);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "28. Recuperar precios del borrador",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/borradores/{{qaDraftId}}",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenSolicitante}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "if(pm.response.code<300 && pm.response.json().borrador) pm.collectionVariables.set(\"qaVersion\",pm.response.json().borrador.version);",
+              "pm.test(\"Precio conservado\",()=>pm.expect(pm.response.json().borrador.articulos[0].precioUnitario).to.eql(25));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "29. Enviar borrador QA",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/borradores/{{qaDraftId}}/enviar",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenSolicitante}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"version\": {{qaSubmitVersion}}}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 202\",()=>pm.response.to.have.status(202));",
+              "if(pm.response.code===202) pm.collectionVariables.set(\"qaRequestId\",pm.response.json().requestId);"
+            ]
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.set(\"qaSubmitVersion\",pm.collectionVariables.get(\"qaVersion\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "30. Consultar borrador tras envio",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/borradores/{{qaDraftId}}",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenSolicitante}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "if(pm.response.code<300 && pm.response.json().borrador) pm.collectionVariables.set(\"qaVersion\",pm.response.json().borrador.version);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "31. Bloqueo PATCH despues del envio",
+      "request": {
+        "method": "PATCH",
+        "url": "{{baseUrl}}/api/borradores/{{qaDraftId}}",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenSolicitante}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"version\": {{qaVersion}}, \"description\": \"NO DEBE GUARDARSE\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 409\",()=>pm.response.to.have.status(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "32. Reintento envio conserva requestId",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/borradores/{{qaDraftId}}/enviar",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenSolicitante}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"version\": {{qaSubmitVersion}}}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 202\",()=>pm.response.to.have.status(202));",
+              "pm.test(\"Mismo intento sin duplicar\",()=>{pm.expect(pm.response.json().requestId).to.eql(pm.collectionVariables.get(\"qaRequestId\"));pm.expect(pm.response.json().reused).to.eql(true);});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "33. Seguimiento persistencia 1",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/solicitudes/{{qaRequestId}}/registro",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenSolicitante}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "pm.test(\"Persistencia confirmada\",()=>pm.expect(pm.response.json().estado).to.eql(\"PERSISTED\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "34. Consultar solicitud QA propia",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/solicitudes/{{qaRequestId}}",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenSolicitante}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "35. Director sin alcance al monto 25",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/solicitudes/{{qaRequestId}}",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenDirector}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 404\",()=>pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "36. Anular solicitud QA propia",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/solicitudes/{{qaRequestId}}/anular",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{qaTokenSolicitante}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"comentarios\": \"QA-20261114-003940 cierre de prueba; sin compra real\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

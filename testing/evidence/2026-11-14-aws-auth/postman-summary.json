@@ -1,0 +1,266 @@
+{
+  "fechaLocal": "2026-11-14",
+  "zona": "America/El_Salvador",
+  "fuente": "Observacion de Collection Runner y vista Grid en Postman web; resumen transcrito, no exportacion nativa del runner",
+  "runId": "205dba9d-7d5b-467b-aedb-e620002b64cc",
+  "peticiones": 36,
+  "asercionesAprobadas": 44,
+  "asercionesFallidas": 0,
+  "errores": 0,
+  "iteraciones": 1,
+  "duracion": "57s 314ms",
+  "casos": [
+    {
+      "metodo": "POST",
+      "numero": 1,
+      "caso": "Login Solicitante",
+      "asercionesAprobadas": 1,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "POST",
+      "numero": 2,
+      "caso": "Login Gerente",
+      "asercionesAprobadas": 1,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "POST",
+      "numero": 3,
+      "caso": "Login Director",
+      "asercionesAprobadas": 1,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "POST",
+      "numero": 4,
+      "caso": "Login Compras",
+      "asercionesAprobadas": 1,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "GET",
+      "numero": 5,
+      "caso": "Identidad Solicitante",
+      "asercionesAprobadas": 2,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "GET",
+      "numero": 6,
+      "caso": "Identidad Gerente",
+      "asercionesAprobadas": 2,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "GET",
+      "numero": 7,
+      "caso": "Identidad Director",
+      "asercionesAprobadas": 2,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "GET",
+      "numero": 8,
+      "caso": "Identidad Compras",
+      "asercionesAprobadas": 2,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "POST",
+      "numero": 9,
+      "caso": "Contrasena incorrecta cuenta existente",
+      "asercionesAprobadas": 1,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "GET",
+      "numero": 10,
+      "caso": "Borradores bloqueados para Gerente",
+      "asercionesAprobadas": 1,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "GET",
+      "numero": 11,
+      "caso": "Borradores bloqueados para Director",
+      "asercionesAprobadas": 1,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "GET",
+      "numero": 12,
+      "caso": "Borradores bloqueados para Compras",
+      "asercionesAprobadas": 1,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "GET",
+      "numero": 13,
+      "caso": "Administracion bloqueada a Solicitante",
+      "asercionesAprobadas": 1,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "GET",
+      "numero": 14,
+      "caso": "Bandeja Gerente",
+      "asercionesAprobadas": 1,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "GET",
+      "numero": 15,
+      "caso": "Bandeja Director",
+      "asercionesAprobadas": 1,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "GET",
+      "numero": 16,
+      "caso": "Catalogo resumen Solicitante",
+      "asercionesAprobadas": 1,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "POST",
+      "numero": 17,
+      "caso": "Crear proveedor exclusivo QA",
+      "asercionesAprobadas": 1,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "POST",
+      "numero": 18,
+      "caso": "Crear borrador QA incompleto",
+      "asercionesAprobadas": 1,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "GET",
+      "numero": 19,
+      "caso": "Recuperar borrador propio",
+      "asercionesAprobadas": 1,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "GET",
+      "numero": 20,
+      "caso": "Lectura borrador ajeno por Gerente",
+      "asercionesAprobadas": 1,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "GET",
+      "numero": 21,
+      "caso": "Lectura borrador ajeno por Director",
+      "asercionesAprobadas": 1,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "GET",
+      "numero": 22,
+      "caso": "Lectura borrador ajeno por Compras",
+      "asercionesAprobadas": 1,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "PATCH",
+      "numero": 23,
+      "caso": "PATCH version vigente",
+      "asercionesAprobadas": 1,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "PATCH",
+      "numero": 24,
+      "caso": "PATCH version anterior conflicto",
+      "asercionesAprobadas": 1,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "PATCH",
+      "numero": 25,
+      "caso": "Segundo PATCH version incrementada",
+      "asercionesAprobadas": 2,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "GET",
+      "numero": 26,
+      "caso": "Persistencia despues de PATCH",
+      "asercionesAprobadas": 1,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "PATCH",
+      "numero": 27,
+      "caso": "Completar borrador con precios numericos",
+      "asercionesAprobadas": 1,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "GET",
+      "numero": 28,
+      "caso": "Recuperar precios del borrador",
+      "asercionesAprobadas": 2,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "POST",
+      "numero": 29,
+      "caso": "Enviar borrador QA",
+      "asercionesAprobadas": 1,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "GET",
+      "numero": 30,
+      "caso": "Consultar borrador tras envio",
+      "asercionesAprobadas": 1,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "PATCH",
+      "numero": 31,
+      "caso": "Bloqueo PATCH despues del envio",
+      "asercionesAprobadas": 1,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "POST",
+      "numero": 32,
+      "caso": "Reintento envio conserva requestId",
+      "asercionesAprobadas": 2,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "GET",
+      "numero": 33,
+      "caso": "Seguimiento persistencia 1",
+      "asercionesAprobadas": 2,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "GET",
+      "numero": 34,
+      "caso": "Consultar solicitud QA propia",
+      "asercionesAprobadas": 1,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "GET",
+      "numero": 35,
+      "caso": "Director sin alcance al monto 25",
+      "asercionesAprobadas": 1,
+      "asercionesFallidas": 0
+    },
+    {
+      "metodo": "POST",
+      "numero": 36,
+      "caso": "Anular solicitud QA propia",
+      "asercionesAprobadas": 1,
+      "asercionesFallidas": 0
+    }
+  ]
+}

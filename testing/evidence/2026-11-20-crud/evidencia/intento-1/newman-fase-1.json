@@ -1,0 +1,5261 @@
+{
+  "collection": {
+    "item": [
+      {
+        "id": "1866c90a-268a-4d6a-8cd5-c761a506f963",
+        "name": "01 CREATE READ",
+        "item": [
+          {
+            "id": "de2d31ae-723b-41fc-8e3f-876cb947cf30",
+            "name": "01 Salud y entorno aislado",
+            "request": {
+              "url": {
+                "path": [
+                  "health"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "8f4e3138-46de-474b-81f8-1f5bae2bd4f0",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                    "pm.test('Backend local de QA',()=>{pm.expect(pm.response.json().modo).to.eql('QA_LOCAL');pm.expect(pm.response.json().tabla).to.match(/^G7-TEST-CRUD-/);});"
+                  ],
+                  "_lastExecutionId": "0b773fc3-1670-47a1-93c9-3fec63b6b290"
+                }
+              }
+            ]
+          },
+          {
+            "id": "d3a9a4b0-fadd-4e0f-ae0d-21a45181cb4d",
+            "name": "02 POST crear temporal",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud temporal\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":999.99}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "c1e948d8-39c6-4354-8497-4ccec7f61649",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 201',()=>pm.response.to.have.status(201));",
+                    "const s=pm.response.json().solicitud;",
+                    "pm.test('ID temporal y datos originales',()=>{pm.expect(s.requestId).to.match(/^G7-TEST-CRUD-/);pm.expect(s.descripcion).to.eql(pm.environment.get('runPrefix')+' solicitud temporal');pm.expect(s.monto).to.eql(999.99);pm.expect(s.estado).to.eql('PENDING');});",
+                    "pm.environment.set('requestId',s.requestId);pm.environment.set('requestIdPrueba',s.requestId);pm.environment.set('fechaCreacion',s.fechaCreacion);"
+                  ],
+                  "_lastExecutionId": "1daf3664-dcaf-4fb1-ab71-8045a58719b3"
+                }
+              }
+            ]
+          },
+          {
+            "id": "fbaa90a2-8a01-4e37-ae5f-ea3bf2d3663d",
+            "name": "03 GET listado contiene temporal",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "990a4dee-f808-4dc2-a336-a2d635bd9923",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                    "pm.test('Registro creado en listado',()=>{const s=pm.response.json().solicitudes.find(s=>s.requestId===pm.environment.get('requestId'));pm.expect(s).to.exist;pm.expect(s.monto).to.eql(999.99);});"
+                  ],
+                  "_lastExecutionId": "55586e2f-5080-45f5-89d0-f8f0e0572526"
+                }
+              }
+            ]
+          },
+          {
+            "id": "d793c226-73fa-4802-ae1c-4d118ecef73d",
+            "name": "04 GET por requestId",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{requestId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "28c3de1a-01f5-4c22-8442-c21b7ca4f1a8",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                    "const s=pm.response.json().solicitud;pm.test('ID y fecha originales conservados',()=>{pm.expect(s.requestId).to.eql(pm.environment.get('requestId'));pm.expect(s.fechaCreacion).to.eql(pm.environment.get('fechaCreacion'));pm.expect(s.estado).to.eql('PENDING');});"
+                  ],
+                  "_lastExecutionId": "ce4ba39c-007e-486a-ae01-ab3d66efd963"
+                }
+              }
+            ]
+          }
+        ],
+        "event": []
+      },
+      {
+        "id": "db6afd3e-070b-4066-9b22-d40093704772",
+        "name": "02 UPDATE NEGATIVAS",
+        "item": [
+          {
+            "id": "4242677c-c79d-462e-b67c-0ec7b075c54d",
+            "name": "05 PUT actualizar descripcion y monto",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{requestId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":1000}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "78acf9dc-f02f-4918-8cfe-0fbf372ddd17",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                    "const s=pm.response.json().solicitud;pm.test('ID y fecha originales conservados',()=>{pm.expect(s.requestId).to.eql(pm.environment.get('requestId'));pm.expect(s.fechaCreacion).to.eql(pm.environment.get('fechaCreacion'));pm.expect(s.estado).to.eql('PENDING');});",
+                    "pm.test('Descripcion y monto actualizados',()=>{pm.expect(s.descripcion).to.eql(pm.environment.get('runPrefix')+' solicitud actualizada');pm.expect(s.monto).to.eql(1000);});"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "f956c8b1-43b8-446a-b743-49caca9638c1",
+            "name": "06 GET listado confirma actualizacion",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "aee4702f-6e97-4f26-aac0-c19688c2a03e",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                    "pm.test('Cambios almacenados en listado',()=>{const s=pm.response.json().solicitudes.find(s=>s.requestId===pm.environment.get('requestId'));pm.expect(s.descripcion).to.eql(pm.environment.get('runPrefix')+' solicitud actualizada');pm.expect(s.monto).to.eql(1000);});"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "b10f29e7-25fc-4525-85d7-2b25e80cc703",
+            "name": "07 GET individual confirma actualizacion",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{requestId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "56d46da8-b081-43cb-8405-fecfa379c6a1",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                    "const s=pm.response.json().solicitud;pm.test('ID y fecha originales conservados',()=>{pm.expect(s.requestId).to.eql(pm.environment.get('requestId'));pm.expect(s.fechaCreacion).to.eql(pm.environment.get('fechaCreacion'));pm.expect(s.estado).to.eql('PENDING');});",
+                    "pm.test('Descripcion y monto actualizados',()=>{pm.expect(s.descripcion).to.eql(pm.environment.get('runPrefix')+' solicitud actualizada');pm.expect(s.monto).to.eql(1000);});"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "9f8845b5-a40d-427e-8a0a-9530d5eb6200",
+            "name": "08 GET ID inexistente",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{missingId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "c7827a84-6a93-4a6b-a45c-408cc40a376c",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 404',()=>pm.response.to.have.status(404));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "854aa78b-8d51-490d-8b15-833b6a013bbb",
+            "name": "09 PUT ID inexistente no crea registro",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{missingId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":1000}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "64c55a7d-62f8-4323-acf6-085ddb108d0b",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 404',()=>pm.response.to.have.status(404));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "f5f033e4-ada6-4a28-aadf-651a642aef5f",
+            "name": "10 DELETE ID inexistente",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{missingId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                }
+              ],
+              "method": "DELETE"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "40f5bb3b-f87d-4ee5-921d-e9c98451d7be",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 404',()=>pm.response.to.have.status(404));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "aa673820-0ae0-42cb-96c1-765f09a627f0",
+            "name": "POST descripcion \"\"",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":1000}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "3f72f6fe-4cf7-4014-8c21-25e4cac63125",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "17068a12-c1ca-451a-8046-98403704a6b5",
+            "name": "POST descripcion null",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":null,\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":1000}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "595c0aec-1254-406e-aa6c-cad490cd8f51",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "3d79b723-fb23-433f-a5b3-f8c99bebe4b5",
+            "name": "POST descripcion \"   \"",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"   \",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":1000}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "8e2524ae-9a92-47e7-adf9-ffea572eaa80",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "f9945a02-6cee-4f8c-a638-c133ea975893",
+            "name": "POST solicitante \"\"",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":\"\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":1000}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "e26d3f2b-cb91-4efa-a47f-ff471035a6cf",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "73cc3237-0a99-4c41-903f-53169c82e7cb",
+            "name": "POST solicitante null",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":null,\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":1000}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "0f9fd08c-cc6a-4d9e-805f-bb096746bcac",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "b5f801d2-7bab-466f-8217-cb3527e3b08f",
+            "name": "POST solicitante \"   \"",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":\"   \",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":1000}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "e340e0b3-257b-4b77-a3e4-2bdd422ec10e",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "ce468213-e3f6-48b3-bc37-558bb2e5f193",
+            "name": "POST departamento \"\"",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"\",\"monto\":1000}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "006314f8-afec-40a6-ac66-dfac900ab1d5",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "40140424-8d3b-4ba0-90be-41e56bc1824b",
+            "name": "POST departamento null",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":null,\"monto\":1000}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "24298e2e-9bd7-4fda-8bca-13111c63cce9",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "4cad72ea-a8c5-45fc-99ce-e01114932222",
+            "name": "POST departamento \"   \"",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"   \",\"monto\":1000}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "43b64a72-f5be-4354-b30e-1babf26e8171",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "b960f16e-4757-427b-b94c-b02ff7b5382b",
+            "name": "POST monto invalido 0",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":0}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "e2fd4abe-f897-47d8-b78e-bf352c458a80",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "38e106e3-86ef-43f0-ad19-8b308a899edc",
+            "name": "POST monto invalido -1",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":-1}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "a09be5a0-75bc-4977-9ecb-e50220381c6b",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "def28f18-cb34-4ec1-b454-f5e904ec19b1",
+            "name": "POST monto invalido \"100\"",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":\"100\"}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "92ff0241-4c1a-4771-90c1-d5e9db4365e1",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "4ff434f7-97c3-4951-b559-bb905946571e",
+            "name": "POST monto invalido null",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":null}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "63a95107-5610-4c40-9aef-1c4a9f43c667",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "0bb9129e-1d01-429c-9610-a01ec77cf2a8",
+            "name": "POST monto ausente",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"G7-TEST-CRUD QA\"}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "2107a0b7-1152-44c9-af53-7fc8f2741d2b",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "7b5a8c77-abb9-44ba-bbd0-3d2500971d01",
+            "name": "POST JSON mal formado",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "c8c2cdb0-fbef-4890-ad8d-3510d630c2de",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "3d587109-ee47-466e-a934-c81740d520f3",
+            "name": "POST array mal formado para contrato",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "[]",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "cd2877c7-34fb-4ce8-9231-b1f5804109c1",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "a14788ed-b110-43ce-bdc2-823cb1f09d55",
+            "name": "POST cuerpo ausente",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "ea141c39-fedc-4da5-9dc9-c94a2dbd0dba",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "0f12b58c-d5a8-4203-999c-7eece162173e",
+            "name": "POST sin prefijo QA",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"FUERA DE LA PRUEBA\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":1000}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "fdb56a2c-7202-4fa8-adbe-8abc701bae64",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 403',()=>pm.response.to.have.status(403));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "d850e7dd-9b5d-414c-a6a3-8200816ee486",
+            "name": "PUT descripcion \"\"",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{requestId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":1000}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "0de47e8f-056d-4091-a66a-ea41b40faa14",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "5b46baae-fffa-4b07-a919-ab317104e2a1",
+            "name": "PUT descripcion null",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{requestId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":null,\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":1000}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "0972f710-e067-4240-a66d-95a7b8e01559",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "c25dd84c-8da7-4792-8514-edb847af0f69",
+            "name": "PUT descripcion \"   \"",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{requestId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"   \",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":1000}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "7fbb6f40-20be-4553-850e-beed39b092e6",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "32b19910-5822-4291-aa49-b4bc66997153",
+            "name": "PUT solicitante \"\"",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{requestId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":\"\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":1000}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "aaaaef5b-5dc0-43f0-8b16-742ea41f42f5",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "ecb21e71-32b3-4d27-9a6a-0e580993e76c",
+            "name": "PUT solicitante null",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{requestId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":null,\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":1000}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "08e7e4f5-7cd6-4007-9197-75beef32fcaa",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "a0b88c0d-0d0a-40dd-9010-530236b1b39e",
+            "name": "PUT solicitante \"   \"",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{requestId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":\"   \",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":1000}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "63fa6fbb-a209-4a94-89b5-429f3ff6056b",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "b9eb075f-87e3-4495-9292-d599ed32b7be",
+            "name": "PUT departamento \"\"",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{requestId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"\",\"monto\":1000}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "cbbb2234-ae89-48f3-a1a0-c1120a25a479",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "892e0115-28a0-4dc9-a3a5-02e672bae4ad",
+            "name": "PUT departamento null",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{requestId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":null,\"monto\":1000}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "413bc150-9c6f-40c4-8ca8-fe40aaa6c62f",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "b6beeaf6-78c2-4c4a-bca6-08ed47baaba0",
+            "name": "PUT departamento \"   \"",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{requestId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"   \",\"monto\":1000}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "d3b368da-dcb3-46d1-90cf-fcea13495369",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "d495ca07-05f2-4843-8132-9691c1af2c3d",
+            "name": "PUT monto invalido 0",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{requestId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":0}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "130e5727-7435-4855-808f-3a8415f9aead",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "3629da2f-67b6-456c-bb1f-c3e789c2ab70",
+            "name": "PUT monto invalido -1",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{requestId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":-1}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "d0f4c857-90ea-45d0-8a89-24a7097b96ef",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "378fc4ee-8d9a-4a65-bb4c-71d6682a0ed8",
+            "name": "PUT monto invalido \"100\"",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{requestId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":\"100\"}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "e9edb7a8-7cf0-4765-bca2-56d3fab0df0c",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "9514f353-92f7-4b3e-a6ae-3ca4cf6d641b",
+            "name": "PUT monto invalido null",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{requestId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":null}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "320e1226-4c0a-4385-9fb0-2e42d988de7f",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "cc53f37c-3397-44dc-8473-a39d4d2c8ceb",
+            "name": "PUT monto ausente",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{requestId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"G7-TEST-CRUD QA\"}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "419f261f-5d7a-4ea3-b7b5-bab59d611177",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "94a69aee-cd30-4c2c-8893-232984474c84",
+            "name": "PUT JSON mal formado",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{requestId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "3f429cd7-2022-4f13-bf5b-f866dbd32d0c",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "0244de71-0b98-4e56-9b9b-d4f286441f3a",
+            "name": "PUT array mal formado para contrato",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{requestId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT",
+              "body": {
+                "mode": "raw",
+                "raw": "[]",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "dc2ad4b0-dbcd-43e0-9526-ce65466ee956",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "955439ec-bf89-41ee-ab28-7763b4196708",
+            "name": "PUT cuerpo ausente",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{requestId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "6394dcef-9151-4ba4-8565-c832a764c2c9",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "7e61fac4-4fcd-48d1-9870-13049ec79055",
+            "name": "PUT sin prefijo QA",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{requestId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"FUERA DE LA PRUEBA\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":1000}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "e1485df9-972e-4b24-a0e4-b24da5082b6c",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 403',()=>pm.response.to.have.status(403));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "5911e402-6d4a-4000-a4d0-0e42963b566f",
+            "name": "PUT rechaza campo protegido requestId",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{requestId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":1000,\"requestId\":\"G7-TEST-CRUD-no-reemplazar\"}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "012f1dd4-f35c-47e0-9d62-618cdcc4407d",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "4fd0bb4c-3229-4dc4-9313-93015ae1a936",
+            "name": "PUT rechaza campo protegido fechaCreacion",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{requestId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":1000,\"fechaCreacion\":\"2000-01-01\"}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "cc798378-e2ca-42b7-989e-4a39b3206800",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "b21a7d7f-8348-4627-b052-57e21ee9ce29",
+            "name": "PUT rechaza campo protegido estado",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{requestId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":1000,\"estado\":\"APPROVED\"}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "2ee5fda1-5099-4ba7-a62f-2ceea7afc589",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "7080b629-1c57-45d6-b460-9211fb07b304",
+            "name": "PUT ID mal formado",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "no-es-id"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":1000}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "f4873f34-cd64-4954-92d4-e37c4c1f2edd",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "8ee56947-d238-4ffa-ab08-56e20e1f1d6d",
+            "name": "DELETE ID mal formado",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "no-es-id"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                }
+              ],
+              "method": "DELETE"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "b0de9e51-8449-4135-8d26-cea895d3e9f5",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "11294645-627c-4f80-a899-2f12fc8eaeb8",
+            "name": "GET ID mal formado",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "no-es-id"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "db101639-699a-44b0-aa6f-dba0810bc35d",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 400',()=>pm.response.to.have.status(400));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "37362e47-2773-495b-af42-825171624880",
+            "name": "POST payload demasiado grande",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"G7-TEST-CRUD aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":1000}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "eff9eceb-448b-4654-b0e1-9a133ca46678",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 413',()=>pm.response.to.have.status(413));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "7473ac20-e9f3-4bad-837b-c383187db650",
+            "name": "PUT registro aprobado protegido",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{protectedId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PUT",
+              "body": {
+                "mode": "raw",
+                "raw": "{\"descripcion\":\"{{runPrefix}} solicitud actualizada\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":1000}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "396e5880-8049-483a-a873-aa51d22b9f76",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 409',()=>pm.response.to.have.status(409));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "299d3022-0943-45ea-804a-e4fd7ee4787a",
+            "name": "DELETE registro aprobado protegido",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{protectedId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                }
+              ],
+              "method": "DELETE"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "7aae8c5e-e246-4c61-b87d-18d9c1f97a81",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 409',()=>pm.response.to.have.status(409));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "90aaadc8-1769-435e-95fb-a9d060bc1ecc",
+            "name": "GET registro aprobado sigue intacto",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{protectedId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "1adbb5a5-e2fa-45f7-b223-802244670951",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                    "pm.test('Estado APPROVED conservado',()=>{pm.expect(pm.response.json().solicitud.estado).to.eql('APPROVED');pm.expect(pm.response.json().solicitud.monto).to.eql(25);});"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "8d049aae-78a5-4dde-afd3-e8a95d92c5cf",
+            "name": "GET temporal intacto tras entradas invalidas",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{requestId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "677d069c-d1db-4255-9ec1-5eb5e9be59be",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                    "const s=pm.response.json().solicitud;pm.test('ID y fecha originales conservados',()=>{pm.expect(s.requestId).to.eql(pm.environment.get('requestId'));pm.expect(s.fechaCreacion).to.eql(pm.environment.get('fechaCreacion'));pm.expect(s.estado).to.eql('PENDING');});",
+                    "pm.test('Descripcion y monto actualizados',()=>{pm.expect(s.descripcion).to.eql(pm.environment.get('runPrefix')+' solicitud actualizada');pm.expect(s.monto).to.eql(1000);});"
+                  ]
+                }
+              }
+            ]
+          }
+        ],
+        "event": []
+      },
+      {
+        "id": "8fe921e4-0232-4912-9315-fded5e92692c",
+        "name": "03 DELETE READ",
+        "item": [
+          {
+            "id": "123c4cd4-15cb-4b44-9f6b-2a8b7a6271a3",
+            "name": "DELETE exclusivamente el temporal creado",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{requestId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                }
+              ],
+              "method": "DELETE"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "80f280f5-df58-4713-bada-2592fe9c2636",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 204',()=>pm.response.to.have.status(204));",
+                    "pm.test('Respuesta sin cuerpo',()=>pm.expect(pm.response.text()).to.eql(''));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "fb8e07a4-705f-42b6-a461-944456ba2404",
+            "name": "GET eliminado devuelve 404",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{requestId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "fefbcf59-ba5b-4e7a-a631-bb06ce8eac7e",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 404',()=>pm.response.to.have.status(404));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "7f61f6a8-8540-4c71-ba0a-9a65d5a17f46",
+            "name": "GET listado ya no contiene temporal",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "06d53439-dace-4206-8d8b-2646c03a22eb",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                    "pm.test('Registro temporal ausente',()=>pm.expect(pm.response.json().solicitudes.some(s=>s.requestId===pm.environment.get('requestId'))).to.eql(false));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "f6a8a05e-aa8a-4e83-acb9-5349efc7fb6a",
+            "name": "DELETE repetido devuelve 404",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "solicitudes",
+                  "{{requestId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Accept",
+                  "value": "application/json"
+                }
+              ],
+              "method": "DELETE"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "7c5cacc7-15cd-4499-a54b-56c4cee97679",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('HTTP 404',()=>pm.response.to.have.status(404));"
+                  ]
+                }
+              }
+            ]
+          }
+        ],
+        "event": []
+      }
+    ],
+    "event": [
+      {
+        "listen": "prerequest",
+        "script": {
+          "id": "2694cf75-4482-4526-8c9a-1511c00f7f51",
+          "type": "text/javascript",
+          "exec": [
+            "const u=pm.environment.get('baseUrl'); if(!/^http:\\/\\/(127\\.0\\.0\\.1|localhost):[0-9]+$/.test(u||'')) throw new Error('Esta coleccion solo permite loopback local'); if(!/^G7-TEST-CRUD-/.test(pm.environment.get('runPrefix')||'')) throw new Error('Falta runPrefix QA');"
+          ],
+          "_lastExecutionId": "96d54083-c464-4677-8e90-1b95b037e422"
+        }
+      }
+    ],
+    "variable": [],
+    "info": {
+      "_postman_id": "4feebb35-de9e-4132-9c93-066f938b06c6",
+      "name": "G7 Compras CRUD final local",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+      "description": {
+        "content": "CRUD del contrato local requestId/monto. Tabla QA exclusiva. No ejecutar sobre la API AURA AWS: usa 202, auth, borradores PATCH y anulacion; no PUT/DELETE de compras enviadas. El orquestador prepara protectedId y valida DynamoDB directamente entre fases.",
+        "type": "text/plain"
+      }
+    }
+  },
+  "environment": {
+    "_": {
+      "postman_variable_scope": "environment"
+    },
+    "id": "30fc44a1-41ec-440f-a180-a12f0520ba87",
+    "name": "G7 CRUD local sin secretos",
+    "values": [
+      {
+        "type": "any",
+        "value": "http://127.0.0.1:13000",
+        "key": "baseUrl"
+      },
+      {
+        "type": "any",
+        "value": "G7-TEST-CRUD-5e6030cf-e2b5-4307-bb96-e045f1747c8d",
+        "key": "runPrefix"
+      },
+      {
+        "type": "any",
+        "value": "G7-TEST-CRUD-d11d8d64-a7df-4de0-af0e-1333707b40e8",
+        "key": "requestId"
+      },
+      {
+        "type": "any",
+        "value": "G7-TEST-CRUD-d11d8d64-a7df-4de0-af0e-1333707b40e8",
+        "key": "requestIdPrueba"
+      },
+      {
+        "type": "any",
+        "value": "2026-11-21T04:32:30.346Z",
+        "key": "fechaCreacion"
+      },
+      {
+        "type": "any",
+        "value": "G7-TEST-CRUD-00000000-0000-4000-8000-000000000001",
+        "key": "missingId"
+      },
+      {
+        "type": "any",
+        "value": "G7-TEST-CRUD-bc3eb5e5-917c-4303-b666-8d35fb7d80ee",
+        "key": "protectedId"
+      }
+    ]
+  },
+  "globals": {
+    "id": "295e1b08-d896-473a-a13d-fa1f231d6527",
+    "values": []
+  },
+  "run": {
+    "stats": {
+      "iterations": {
+        "total": 1,
+        "pending": 0,
+        "failed": 0
+      },
+      "items": {
+        "total": 4,
+        "pending": 0,
+        "failed": 0
+      },
+      "scripts": {
+        "total": 8,
+        "pending": 0,
+        "failed": 0
+      },
+      "prerequests": {
+        "total": 4,
+        "pending": 0,
+        "failed": 0
+      },
+      "requests": {
+        "total": 4,
+        "pending": 0,
+        "failed": 0
+      },
+      "tests": {
+        "total": 4,
+        "pending": 0,
+        "failed": 0
+      },
+      "assertions": {
+        "total": 8,
+        "pending": 0,
+        "failed": 0
+      },
+      "testScripts": {
+        "total": 4,
+        "pending": 0,
+        "failed": 0
+      },
+      "prerequestScripts": {
+        "total": 4,
+        "pending": 0,
+        "failed": 0
+      }
+    },
+    "timings": {
+      "responseAverage": 111.25,
+      "responseMin": 62,
+      "responseMax": 145,
+      "responseSd": 32.64486942844159,
+      "dnsAverage": 0,
+      "dnsMin": 0,
+      "dnsMax": 0,
+      "dnsSd": 0,
+      "firstByteAverage": 0,
+      "firstByteMin": 0,
+      "firstByteMax": 0,
+      "firstByteSd": 0,
+      "started": 1795235549847,
+      "completed": 1795235550989
+    },
+    "executions": [
+      {
+        "cursor": {
+          "position": 0,
+          "iteration": 0,
+          "length": 4,
+          "cycles": 1,
+          "empty": false,
+          "eof": false,
+          "bof": true,
+          "cr": false,
+          "ref": "44b967ac-0fc6-4c2d-8a7d-1453d3d4a1fc",
+          "httpRequestId": "b4620165-d0bc-4762-90f5-06505e0c392d"
+        },
+        "item": {
+          "id": "de2d31ae-723b-41fc-8e3f-876cb947cf30",
+          "name": "01 Salud y entorno aislado",
+          "request": {
+            "url": {
+              "path": [
+                "health"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "8f4e3138-46de-474b-81f8-1f5bae2bd4f0",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "pm.test('Backend local de QA',()=>{pm.expect(pm.response.json().modo).to.eql('QA_LOCAL');pm.expect(pm.response.json().tabla).to.match(/^G7-TEST-CRUD-/);});"
+                ],
+                "_lastExecutionId": "0b773fc3-1670-47a1-93c9-3fec63b6b290"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "13000",
+            "path": [
+              "health"
+            ],
+            "host": [
+              "127",
+              "0",
+              "0",
+              "1"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Accept",
+              "value": "application/json"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "cdb62db5-aa33-497d-afa4-37d83b36037b",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "127.0.0.1:13000",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            }
+          ],
+          "method": "GET"
+        },
+        "response": {
+          "id": "6714c9fd-b0a8-464e-96ef-29eb9fc98a2a",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "X-Powered-By",
+              "value": "Express"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "112"
+            },
+            {
+              "key": "ETag",
+              "value": "W/\"70-DNq+T8xaff5IDx//EaH5LrH73EE\""
+            },
+            {
+              "key": "Date",
+              "value": "Sat, 21 Nov 2026 04:32:30 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              109,
+              101,
+              110,
+              115,
+              97,
+              106,
+              101,
+              34,
+              58,
+              34,
+              66,
+              97,
+              99,
+              107,
+              101,
+              110,
+              100,
+              32,
+              100,
+              101,
+              108,
+              32,
+              71,
+              114,
+              117,
+              112,
+              111,
+              32,
+              55,
+              32,
+              102,
+              117,
+              110,
+              99,
+              105,
+              111,
+              110,
+              97,
+              110,
+              100,
+              111,
+              34,
+              44,
+              34,
+              101,
+              115,
+              116,
+              97,
+              100,
+              111,
+              34,
+              58,
+              34,
+              79,
+              75,
+              34,
+              44,
+              34,
+              109,
+              111,
+              100,
+              111,
+              34,
+              58,
+              34,
+              81,
+              65,
+              95,
+              76,
+              79,
+              67,
+              65,
+              76,
+              34,
+              44,
+              34,
+              116,
+              97,
+              98,
+              108,
+              97,
+              34,
+              58,
+              34,
+              71,
+              55,
+              45,
+              84,
+              69,
+              83,
+              84,
+              45,
+              67,
+              82,
+              85,
+              68,
+              45,
+              115,
+              111,
+              108,
+              105,
+              99,
+              105,
+              116,
+              117,
+              100,
+              101,
+              115,
+              34,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 102,
+          "responseSize": 112
+        },
+        "id": "de2d31ae-723b-41fc-8e3f-876cb947cf30",
+        "assertions": [
+          {
+            "assertion": "HTTP 200",
+            "skipped": false
+          },
+          {
+            "assertion": "Backend local de QA",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "fb230bd9-cc0d-420f-83a4-92f130782a88",
+          "length": 4,
+          "cycles": 1,
+          "position": 1,
+          "iteration": 0,
+          "httpRequestId": "63c08029-ad4c-4682-8a50-ae7420784016"
+        },
+        "item": {
+          "id": "d3a9a4b0-fadd-4e0f-ae0d-21a45181cb4d",
+          "name": "02 POST crear temporal",
+          "request": {
+            "url": {
+              "path": [
+                "api",
+                "solicitudes"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"descripcion\":\"{{runPrefix}} solicitud temporal\",\"solicitante\":\"{{runPrefix}} solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":999.99}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "c1e948d8-39c6-4354-8497-4ccec7f61649",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201',()=>pm.response.to.have.status(201));",
+                  "const s=pm.response.json().solicitud;",
+                  "pm.test('ID temporal y datos originales',()=>{pm.expect(s.requestId).to.match(/^G7-TEST-CRUD-/);pm.expect(s.descripcion).to.eql(pm.environment.get('runPrefix')+' solicitud temporal');pm.expect(s.monto).to.eql(999.99);pm.expect(s.estado).to.eql('PENDING');});",
+                  "pm.environment.set('requestId',s.requestId);pm.environment.set('requestIdPrueba',s.requestId);pm.environment.set('fechaCreacion',s.fechaCreacion);"
+                ],
+                "_lastExecutionId": "1daf3664-dcaf-4fb1-ab71-8045a58719b3"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "13000",
+            "path": [
+              "api",
+              "solicitudes"
+            ],
+            "host": [
+              "127",
+              "0",
+              "0",
+              "1"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Accept",
+              "value": "application/json"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "081d8b1b-2622-4da0-8d00-e897e85e5ce0",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "127.0.0.1:13000",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "212",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\"descripcion\":\"G7-TEST-CRUD-5e6030cf-e2b5-4307-bb96-e045f1747c8d solicitud temporal\",\"solicitante\":\"G7-TEST-CRUD-5e6030cf-e2b5-4307-bb96-e045f1747c8d solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":999.99}",
+            "options": {
+              "raw": {
+                "language": "json"
+              }
+            }
+          }
+        },
+        "response": {
+          "id": "69980783-10c4-4c39-b45a-595b4e0268fe",
+          "status": "Created",
+          "code": 201,
+          "header": [
+            {
+              "key": "X-Powered-By",
+              "value": "Express"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "395"
+            },
+            {
+              "key": "ETag",
+              "value": "W/\"18b-CgWp2jg2ulKGjnJ3U0HV+nrcp2k\""
+            },
+            {
+              "key": "Date",
+              "value": "Sat, 21 Nov 2026 04:32:30 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              109,
+              101,
+              110,
+              115,
+              97,
+              106,
+              101,
+              34,
+              58,
+              34,
+              83,
+              111,
+              108,
+              105,
+              99,
+              105,
+              116,
+              117,
+              100,
+              32,
+              99,
+              114,
+              101,
+              97,
+              100,
+              97,
+              32,
+              99,
+              111,
+              114,
+              114,
+              101,
+              99,
+              116,
+              97,
+              109,
+              101,
+              110,
+              116,
+              101,
+              34,
+              44,
+              34,
+              115,
+              111,
+              108,
+              105,
+              99,
+              105,
+              116,
+              117,
+              100,
+              34,
+              58,
+              123,
+              34,
+              114,
+              101,
+              113,
+              117,
+              101,
+              115,
+              116,
+              73,
+              100,
+              34,
+              58,
+              34,
+              71,
+              55,
+              45,
+              84,
+              69,
+              83,
+              84,
+              45,
+              67,
+              82,
+              85,
+              68,
+              45,
+              100,
+              49,
+              49,
+              100,
+              56,
+              100,
+              54,
+              52,
+              45,
+              97,
+              55,
+              100,
+              102,
+              45,
+              52,
+              100,
+              101,
+              48,
+              45,
+              97,
+              102,
+              48,
+              101,
+              45,
+              49,
+              51,
+              51,
+              51,
+              55,
+              48,
+              55,
+              98,
+              52,
+              48,
+              101,
+              56,
+              34,
+              44,
+              34,
+              100,
+              101,
+              115,
+              99,
+              114,
+              105,
+              112,
+              99,
+              105,
+              111,
+              110,
+              34,
+              58,
+              34,
+              71,
+              55,
+              45,
+              84,
+              69,
+              83,
+              84,
+              45,
+              67,
+              82,
+              85,
+              68,
+              45,
+              53,
+              101,
+              54,
+              48,
+              51,
+              48,
+              99,
+              102,
+              45,
+              101,
+              50,
+              98,
+              53,
+              45,
+              52,
+              51,
+              48,
+              55,
+              45,
+              98,
+              98,
+              57,
+              54,
+              45,
+              101,
+              48,
+              52,
+              53,
+              102,
+              49,
+              55,
+              52,
+              55,
+              99,
+              56,
+              100,
+              32,
+              115,
+              111,
+              108,
+              105,
+              99,
+              105,
+              116,
+              117,
+              100,
+              32,
+              116,
+              101,
+              109,
+              112,
+              111,
+              114,
+              97,
+              108,
+              34,
+              44,
+              34,
+              115,
+              111,
+              108,
+              105,
+              99,
+              105,
+              116,
+              97,
+              110,
+              116,
+              101,
+              34,
+              58,
+              34,
+              71,
+              55,
+              45,
+              84,
+              69,
+              83,
+              84,
+              45,
+              67,
+              82,
+              85,
+              68,
+              45,
+              53,
+              101,
+              54,
+              48,
+              51,
+              48,
+              99,
+              102,
+              45,
+              101,
+              50,
+              98,
+              53,
+              45,
+              52,
+              51,
+              48,
+              55,
+              45,
+              98,
+              98,
+              57,
+              54,
+              45,
+              101,
+              48,
+              52,
+              53,
+              102,
+              49,
+              55,
+              52,
+              55,
+              99,
+              56,
+              100,
+              32,
+              115,
+              111,
+              108,
+              105,
+              99,
+              105,
+              116,
+              97,
+              110,
+              116,
+              101,
+              34,
+              44,
+              34,
+              100,
+              101,
+              112,
+              97,
+              114,
+              116,
+              97,
+              109,
+              101,
+              110,
+              116,
+              111,
+              34,
+              58,
+              34,
+              71,
+              55,
+              45,
+              84,
+              69,
+              83,
+              84,
+              45,
+              67,
+              82,
+              85,
+              68,
+              32,
+              81,
+              65,
+              34,
+              44,
+              34,
+              109,
+              111,
+              110,
+              116,
+              111,
+              34,
+              58,
+              57,
+              57,
+              57,
+              46,
+              57,
+              57,
+              44,
+              34,
+              101,
+              115,
+              116,
+              97,
+              100,
+              111,
+              34,
+              58,
+              34,
+              80,
+              69,
+              78,
+              68,
+              73,
+              78,
+              71,
+              34,
+              44,
+              34,
+              102,
+              101,
+              99,
+              104,
+              97,
+              67,
+              114,
+              101,
+              97,
+              99,
+              105,
+              111,
+              110,
+              34,
+              58,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              49,
+              49,
+              45,
+              50,
+              49,
+              84,
+              48,
+              52,
+              58,
+              51,
+              50,
+              58,
+              51,
+              48,
+              46,
+              51,
+              52,
+              54,
+              90,
+              34,
+              125,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 136,
+          "responseSize": 395
+        },
+        "id": "d3a9a4b0-fadd-4e0f-ae0d-21a45181cb4d",
+        "assertions": [
+          {
+            "assertion": "HTTP 201",
+            "skipped": false
+          },
+          {
+            "assertion": "ID temporal y datos originales",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "9c50a67b-2c8a-4cf1-811c-bf27e0d3b532",
+          "length": 4,
+          "cycles": 1,
+          "position": 2,
+          "iteration": 0,
+          "httpRequestId": "bd62265d-f9cd-44d0-83f5-f86562b4f65e"
+        },
+        "item": {
+          "id": "fbaa90a2-8a01-4e37-ae5f-ea3bf2d3663d",
+          "name": "03 GET listado contiene temporal",
+          "request": {
+            "url": {
+              "path": [
+                "api",
+                "solicitudes"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "990a4dee-f808-4dc2-a336-a2d635bd9923",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "pm.test('Registro creado en listado',()=>{const s=pm.response.json().solicitudes.find(s=>s.requestId===pm.environment.get('requestId'));pm.expect(s).to.exist;pm.expect(s.monto).to.eql(999.99);});"
+                ],
+                "_lastExecutionId": "55586e2f-5080-45f5-89d0-f8f0e0572526"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "13000",
+            "path": [
+              "api",
+              "solicitudes"
+            ],
+            "host": [
+              "127",
+              "0",
+              "0",
+              "1"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Accept",
+              "value": "application/json"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "b5912a3b-cd04-48bc-a0c6-922c3b163ef5",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "127.0.0.1:13000",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            }
+          ],
+          "method": "GET"
+        },
+        "response": {
+          "id": "55c67ed4-ae5f-4158-b632-143accfcb8e1",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "X-Powered-By",
+              "value": "Express"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "691"
+            },
+            {
+              "key": "ETag",
+              "value": "W/\"2b3-tCxzSskxBcPrJJOdYdD2tAVNZ9I\""
+            },
+            {
+              "key": "Date",
+              "value": "Sat, 21 Nov 2026 04:32:30 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              116,
+              111,
+              116,
+              97,
+              108,
+              34,
+              58,
+              50,
+              44,
+              34,
+              115,
+              111,
+              108,
+              105,
+              99,
+              105,
+              116,
+              117,
+              100,
+              101,
+              115,
+              34,
+              58,
+              91,
+              123,
+              34,
+              100,
+              101,
+              115,
+              99,
+              114,
+              105,
+              112,
+              99,
+              105,
+              111,
+              110,
+              34,
+              58,
+              34,
+              71,
+              55,
+              45,
+              84,
+              69,
+              83,
+              84,
+              45,
+              67,
+              82,
+              85,
+              68,
+              45,
+              53,
+              101,
+              54,
+              48,
+              51,
+              48,
+              99,
+              102,
+              45,
+              101,
+              50,
+              98,
+              53,
+              45,
+              52,
+              51,
+              48,
+              55,
+              45,
+              98,
+              98,
+              57,
+              54,
+              45,
+              101,
+              48,
+              52,
+              53,
+              102,
+              49,
+              55,
+              52,
+              55,
+              99,
+              56,
+              100,
+              32,
+              102,
+              105,
+              120,
+              116,
+              117,
+              114,
+              101,
+              32,
+              97,
+              112,
+              114,
+              111,
+              98,
+              97,
+              100,
+              97,
+              32,
+              110,
+              111,
+              32,
+              109,
+              111,
+              100,
+              105,
+              102,
+              105,
+              99,
+              97,
+              114,
+              34,
+              44,
+              34,
+              101,
+              115,
+              116,
+              97,
+              100,
+              111,
+              34,
+              58,
+              34,
+              65,
+              80,
+              80,
+              82,
+              79,
+              86,
+              69,
+              68,
+              34,
+              44,
+              34,
+              109,
+              111,
+              110,
+              116,
+              111,
+              34,
+              58,
+              50,
+              53,
+              44,
+              34,
+              114,
+              101,
+              113,
+              117,
+              101,
+              115,
+              116,
+              73,
+              100,
+              34,
+              58,
+              34,
+              71,
+              55,
+              45,
+              84,
+              69,
+              83,
+              84,
+              45,
+              67,
+              82,
+              85,
+              68,
+              45,
+              98,
+              99,
+              51,
+              101,
+              98,
+              53,
+              101,
+              53,
+              45,
+              57,
+              49,
+              55,
+              99,
+              45,
+              52,
+              51,
+              48,
+              51,
+              45,
+              98,
+              54,
+              54,
+              54,
+              45,
+              56,
+              100,
+              51,
+              53,
+              102,
+              98,
+              55,
+              100,
+              56,
+              48,
+              101,
+              101,
+              34,
+              44,
+              34,
+              115,
+              111,
+              108,
+              105,
+              99,
+              105,
+              116,
+              97,
+              110,
+              116,
+              101,
+              34,
+              58,
+              34,
+              71,
+              55,
+              45,
+              84,
+              69,
+              83,
+              84,
+              45,
+              67,
+              82,
+              85,
+              68,
+              45,
+              53,
+              101,
+              54,
+              48,
+              51,
+              48,
+              99,
+              102,
+              45,
+              101,
+              50,
+              98,
+              53,
+              45,
+              52,
+              51,
+              48,
+              55,
+              45,
+              98,
+              98,
+              57,
+              54,
+              45,
+              101,
+              48,
+              52,
+              53,
+              102,
+              49,
+              55,
+              52,
+              55,
+              99,
+              56,
+              100,
+              32,
+              81,
+              65,
+              34,
+              44,
+              34,
+              100,
+              101,
+              112,
+              97,
+              114,
+              116,
+              97,
+              109,
+              101,
+              110,
+              116,
+              111,
+              34,
+              58,
+              34,
+              81,
+              65,
+              34,
+              44,
+              34,
+              102,
+              101,
+              99,
+              104,
+              97,
+              67,
+              114,
+              101,
+              97,
+              99,
+              105,
+              111,
+              110,
+              34,
+              58,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              49,
+              49,
+              45,
+              50,
+              49,
+              84,
+              48,
+              52,
+              58,
+              51,
+              50,
+              58,
+              50,
+              54,
+              46,
+              52,
+              57,
+              51,
+              90,
+              34,
+              125,
+              44,
+              123,
+              34,
+              100,
+              101,
+              115,
+              99,
+              114,
+              105,
+              112,
+              99,
+              105,
+              111,
+              110,
+              34,
+              58,
+              34,
+              71,
+              55,
+              45,
+              84,
+              69,
+              83,
+              84,
+              45,
+              67,
+              82,
+              85,
+              68,
+              45,
+              53,
+              101,
+              54,
+              48,
+              51,
+              48,
+              99,
+              102,
+              45,
+              101,
+              50,
+              98,
+              53,
+              45,
+              52,
+              51,
+              48,
+              55,
+              45,
+              98,
+              98,
+              57,
+              54,
+              45,
+              101,
+              48,
+              52,
+              53,
+              102,
+              49,
+              55,
+              52,
+              55,
+              99,
+              56,
+              100,
+              32,
+              115,
+              111,
+              108,
+              105,
+              99,
+              105,
+              116,
+              117,
+              100,
+              32,
+              116,
+              101,
+              109,
+              112,
+              111,
+              114,
+              97,
+              108,
+              34,
+              44,
+              34,
+              101,
+              115,
+              116,
+              97,
+              100,
+              111,
+              34,
+              58,
+              34,
+              80,
+              69,
+              78,
+              68,
+              73,
+              78,
+              71,
+              34,
+              44,
+              34,
+              109,
+              111,
+              110,
+              116,
+              111,
+              34,
+              58,
+              57,
+              57,
+              57,
+              46,
+              57,
+              57,
+              44,
+              34,
+              114,
+              101,
+              113,
+              117,
+              101,
+              115,
+              116,
+              73,
+              100,
+              34,
+              58,
+              34,
+              71,
+              55,
+              45,
+              84,
+              69,
+              83,
+              84,
+              45,
+              67,
+              82,
+              85,
+              68,
+              45,
+              100,
+              49,
+              49,
+              100,
+              56,
+              100,
+              54,
+              52,
+              45,
+              97,
+              55,
+              100,
+              102,
+              45,
+              52,
+              100,
+              101,
+              48,
+              45,
+              97,
+              102,
+              48,
+              101,
+              45,
+              49,
+              51,
+              51,
+              51,
+              55,
+              48,
+              55,
+              98,
+              52,
+              48,
+              101,
+              56,
+              34,
+              44,
+              34,
+              115,
+              111,
+              108,
+              105,
+              99,
+              105,
+              116,
+              97,
+              110,
+              116,
+              101,
+              34,
+              58,
+              34,
+              71,
+              55,
+              45,
+              84,
+              69,
+              83,
+              84,
+              45,
+              67,
+              82,
+              85,
+              68,
+              45,
+              53,
+              101,
+              54,
+              48,
+              51,
+              48,
+              99,
+              102,
+              45,
+              101,
+              50,
+              98,
+              53,
+              45,
+              52,
+              51,
+              48,
+              55,
+              45,
+              98,
+              98,
+              57,
+              54,
+              45,
+              101,
+              48,
+              52,
+              53,
+              102,
+              49,
+              55,
+              52,
+              55,
+              99,
+              56,
+              100,
+              32,
+              115,
+              111,
+              108,
+              105,
+              99,
+              105,
+              116,
+              97,
+              110,
+              116,
+              101,
+              34,
+              44,
+              34,
+              100,
+              101,
+              112,
+              97,
+              114,
+              116,
+              97,
+              109,
+              101,
+              110,
+              116,
+              111,
+              34,
+              58,
+              34,
+              71,
+              55,
+              45,
+              84,
+              69,
+              83,
+              84,
+              45,
+              67,
+              82,
+              85,
+              68,
+              32,
+              81,
+              65,
+              34,
+              44,
+              34,
+              102,
+              101,
+              99,
+              104,
+              97,
+              67,
+              114,
+              101,
+              97,
+              99,
+              105,
+              111,
+              110,
+              34,
+              58,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              49,
+              49,
+              45,
+              50,
+              49,
+              84,
+              48,
+              52,
+              58,
+              51,
+              50,
+              58,
+              51,
+              48,
+              46,
+              51,
+              52,
+              54,
+              90,
+              34,
+              125,
+              93,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 145,
+          "responseSize": 691
+        },
+        "id": "fbaa90a2-8a01-4e37-ae5f-ea3bf2d3663d",
+        "assertions": [
+          {
+            "assertion": "HTTP 200",
+            "skipped": false
+          },
+          {
+            "assertion": "Registro creado en listado",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "8f03c82e-9f56-4971-aacc-28dc835d9f62",
+          "length": 4,
+          "cycles": 1,
+          "position": 3,
+          "iteration": 0,
+          "httpRequestId": "6cb3485b-a9ba-4c97-a138-c478c9002032"
+        },
+        "item": {
+          "id": "d793c226-73fa-4802-ae1c-4d118ecef73d",
+          "name": "04 GET por requestId",
+          "request": {
+            "url": {
+              "path": [
+                "api",
+                "solicitudes",
+                "{{requestId}}"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "28c3de1a-01f5-4c22-8442-c21b7ca4f1a8",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "const s=pm.response.json().solicitud;pm.test('ID y fecha originales conservados',()=>{pm.expect(s.requestId).to.eql(pm.environment.get('requestId'));pm.expect(s.fechaCreacion).to.eql(pm.environment.get('fechaCreacion'));pm.expect(s.estado).to.eql('PENDING');});"
+                ],
+                "_lastExecutionId": "ce4ba39c-007e-486a-ae01-ab3d66efd963"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "13000",
+            "path": [
+              "api",
+              "solicitudes",
+              "G7-TEST-CRUD-d11d8d64-a7df-4de0-af0e-1333707b40e8"
+            ],
+            "host": [
+              "127",
+              "0",
+              "0",
+              "1"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Accept",
+              "value": "application/json"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "c5ee1f67-133d-4bff-bf15-3467be117514",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "127.0.0.1:13000",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            }
+          ],
+          "method": "GET"
+        },
+        "response": {
+          "id": "cc726b5c-b153-4957-a558-df2bc1465915",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "X-Powered-By",
+              "value": "Express"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "352"
+            },
+            {
+              "key": "ETag",
+              "value": "W/\"160-wBa32a5puwTDZgv2Nb50IED/9Ig\""
+            },
+            {
+              "key": "Date",
+              "value": "Sat, 21 Nov 2026 04:32:30 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              115,
+              111,
+              108,
+              105,
+              99,
+              105,
+              116,
+              117,
+              100,
+              34,
+              58,
+              123,
+              34,
+              100,
+              101,
+              115,
+              99,
+              114,
+              105,
+              112,
+              99,
+              105,
+              111,
+              110,
+              34,
+              58,
+              34,
+              71,
+              55,
+              45,
+              84,
+              69,
+              83,
+              84,
+              45,
+              67,
+              82,
+              85,
+              68,
+              45,
+              53,
+              101,
+              54,
+              48,
+              51,
+              48,
+              99,
+              102,
+              45,
+              101,
+              50,
+              98,
+              53,
+              45,
+              52,
+              51,
+              48,
+              55,
+              45,
+              98,
+              98,
+              57,
+              54,
+              45,
+              101,
+              48,
+              52,
+              53,
+              102,
+              49,
+              55,
+              52,
+              55,
+              99,
+              56,
+              100,
+              32,
+              115,
+              111,
+              108,
+              105,
+              99,
+              105,
+              116,
+              117,
+              100,
+              32,
+              116,
+              101,
+              109,
+              112,
+              111,
+              114,
+              97,
+              108,
+              34,
+              44,
+              34,
+              101,
+              115,
+              116,
+              97,
+              100,
+              111,
+              34,
+              58,
+              34,
+              80,
+              69,
+              78,
+              68,
+              73,
+              78,
+              71,
+              34,
+              44,
+              34,
+              109,
+              111,
+              110,
+              116,
+              111,
+              34,
+              58,
+              57,
+              57,
+              57,
+              46,
+              57,
+              57,
+              44,
+              34,
+              114,
+              101,
+              113,
+              117,
+              101,
+              115,
+              116,
+              73,
+              100,
+              34,
+              58,
+              34,
+              71,
+              55,
+              45,
+              84,
+              69,
+              83,
+              84,
+              45,
+              67,
+              82,
+              85,
+              68,
+              45,
+              100,
+              49,
+              49,
+              100,
+              56,
+              100,
+              54,
+              52,
+              45,
+              97,
+              55,
+              100,
+              102,
+              45,
+              52,
+              100,
+              101,
+              48,
+              45,
+              97,
+              102,
+              48,
+              101,
+              45,
+              49,
+              51,
+              51,
+              51,
+              55,
+              48,
+              55,
+              98,
+              52,
+              48,
+              101,
+              56,
+              34,
+              44,
+              34,
+              115,
+              111,
+              108,
+              105,
+              99,
+              105,
+              116,
+              97,
+              110,
+              116,
+              101,
+              34,
+              58,
+              34,
+              71,
+              55,
+              45,
+              84,
+              69,
+              83,
+              84,
+              45,
+              67,
+              82,
+              85,
+              68,
+              45,
+              53,
+              101,
+              54,
+              48,
+              51,
+              48,
+              99,
+              102,
+              45,
+              101,
+              50,
+              98,
+              53,
+              45,
+              52,
+              51,
+              48,
+              55,
+              45,
+              98,
+              98,
+              57,
+              54,
+              45,
+              101,
+              48,
+              52,
+              53,
+              102,
+              49,
+              55,
+              52,
+              55,
+              99,
+              56,
+              100,
+              32,
+              115,
+              111,
+              108,
+              105,
+              99,
+              105,
+              116,
+              97,
+              110,
+              116,
+              101,
+              34,
+              44,
+              34,
+              100,
+              101,
+              112,
+              97,
+              114,
+              116,
+              97,
+              109,
+              101,
+              110,
+              116,
+              111,
+              34,
+              58,
+              34,
+              71,
+              55,
+              45,
+              84,
+              69,
+              83,
+              84,
+              45,
+              67,
+              82,
+              85,
+              68,
+              32,
+              81,
+              65,
+              34,
+              44,
+              34,
+              102,
+              101,
+              99,
+              104,
+              97,
+              67,
+              114,
+              101,
+              97,
+              99,
+              105,
+              111,
+              110,
+              34,
+              58,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              49,
+              49,
+              45,
+              50,
+              49,
+              84,
+              48,
+              52,
+              58,
+              51,
+              50,
+              58,
+              51,
+              48,
+              46,
+              51,
+              52,
+              54,
+              90,
+              34,
+              125,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 62,
+          "responseSize": 352
+        },
+        "id": "d793c226-73fa-4802-ae1c-4d118ecef73d",
+        "assertions": [
+          {
+            "assertion": "HTTP 200",
+            "skipped": false
+          },
+          {
+            "assertion": "ID y fecha originales conservados",
+            "skipped": false
+          }
+        ]
+      }
+    ],
+    "transfers": {
+      "responseTotal": 1550
+    },
+    "failures": [],
+    "error": null
+  }
+}

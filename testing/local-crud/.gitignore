@@ -1,0 +1,8 @@
+backend/node_modules/
+tools/node_modules/
+dynamodb/
+outputs/
+*.log
+*.db
+*.sqlite
+.env

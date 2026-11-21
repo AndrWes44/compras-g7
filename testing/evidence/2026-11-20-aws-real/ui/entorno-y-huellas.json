@@ -1,0 +1,33 @@
+{
+  "fechaUTC": "2026-11-21T05:24:23.227Z",
+  "frontend": "http://g7-dev-frontend-aura-021686096746.s3-website.us-east-2.amazonaws.com/",
+  "api": "https://6pkbutuqre.execute-api.us-east-2.amazonaws.com",
+  "git": {
+    "develop": "b6d6f344ad74279e8bcf237bcaaa761cc5660d34",
+    "feature/backend": "82309f4d931d94b36f9d09980e0bb3186fec65f6",
+    "feature/frontend": "c0a47b3de0aa90e48b874c6a53b8ad04fc833d4e"
+  },
+  "nota": "SHAs de ramas consultadas; no acreditan el SHA desplegado en Lambda. No hay AWS CLI ni perfil local autorizado configurado.",
+  "archivosPublicos": [
+    {
+      "archivo": "index.html",
+      "sha256": "e4009923c7187c0c9ade89c12c47a9a83bdcdcd0b2aa79f2ca027fd0c8e42148"
+    },
+    {
+      "archivo": "config.js",
+      "sha256": "ad58fbca05d82f055da46e7d2ee7e9b78f07725b317f37222d671aefef5e61ea"
+    },
+    {
+      "archivo": "auth.js",
+      "sha256": "d39546687b1fb66895b9115274d7c1b3693cbb1414df813ae4ed69b905117791"
+    },
+    {
+      "archivo": "api.js",
+      "sha256": "98616c7fcf5c51361e429c236785939e9a6e297a9a447211a2b798f97bcac0b0"
+    },
+    {
+      "archivo": "app.js",
+      "sha256": "06d96d5ec6f2fa12469668232498a77d3d04f9d8a84ffc43d1f7ca8169278dae"
+    }
+  ]
+}
