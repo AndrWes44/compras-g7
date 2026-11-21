@@ -282,6 +282,7 @@ function renderRegistro() {
           <div>
             <label class="block text-xs font-medium text-slate-300 mb-1">Contraseña</label>
             <input type="password" id="reg-password" required minlength="8" placeholder="Mínimo 8 car., Mayús, Núm, Símbolo" class="w-full px-3.5 py-2.5 bg-aura-input border border-aura-border rounded-lg text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500">
+            <p class="text-[10px] text-slate-400 mt-1">Debe incluir al menos 8 caracteres, una mayúscula, una minúscula, un número y un símbolo.</p>
           </div>
 
           <button type="submit" class="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg text-sm shadow-lg transition-all flex items-center justify-center gap-2">
@@ -3314,6 +3315,18 @@ window.handleRegistroSubmit = async function(e) {
     return;
   }
 
+  const faltantes = [];
+  if (password.length < 8) faltantes.push('mínimo 8 caracteres');
+  if (!/[A-Z]/.test(password)) faltantes.push('una mayúscula');
+  if (!/[a-z]/.test(password)) faltantes.push('una minúscula');
+  if (!/[0-9]/.test(password)) faltantes.push('un número');
+  if (!/[^A-Za-z0-9]/.test(password)) faltantes.push('un símbolo');
+
+  if (faltantes.length > 0) {
+    showToast(`Contraseña inválida. Falta incluir: ${faltantes.join(', ')}.`, 'warning');
+    return;
+  }
+
   const submitBtn = e.target.querySelector('button[type="submit"]');
   const originalText = submitBtn ? submitBtn.innerHTML : '';
   if (submitBtn) {
@@ -3329,7 +3342,13 @@ window.handleRegistroSubmit = async function(e) {
     render();
   } catch (err) {
     console.error('[AURA Registro Error]', err);
-    showToast('Error al registrar usuario: ' + err.message, 'warning');
+    const rawMsg = String(err.message || '');
+    const msgLower = rawMsg.toLowerCase();
+    const isPasswordErr = msgLower.includes('password') || msgLower.includes('contraseña') || msgLower.includes('policy') || msgLower.includes('requisitos');
+    const finalMsg = isPasswordErr
+      ? 'La contraseña no cumple con los requisitos de seguridad (mínimo 8 caracteres, mayúscula, minúscula, número y símbolo).'
+      : `Error al registrar usuario: ${rawMsg}`;
+    showToast(finalMsg, 'warning');
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
