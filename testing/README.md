@@ -1,5 +1,9 @@
 # Testing y API Integration - Diego
 
+## Evidencia de cierre AWS real
+
+La [evidencia final del 20 de noviembre](evidence/2026-11-20-aws-real/README.md) registra cinco accesos UI, creacion/lectura/edicion sobre datos propios, una corrida Newman con 14 de 17 aserciones aprobadas y el diagnostico puntual de dos consultas por ID incorrecto. La eliminacion quedo bloqueada y las decisiones por monto quedaron pendientes. No confundir estos resultados con el CRUD local aislado. La coleccion portable es `postman/G7-AWS-REAL.postman_collection.json`; las credenciales y capturas no se publican.
+
 ## Cierre CRUD local del 20 de noviembre de 2026
 
 La suite local completa esta en `testing/local-crud` y usa una instancia oficial de DynamoDB Local aislada, sin mocks ni AWS remoto. Se ejecutaron 61 peticiones, 75 aserciones Newman y seis lecturas/verificaciones directas de DynamoDB, con cero fallos en la corrida final. Otras cuatro pruebas verifican que la configuracion rechace destinos remotos y tablas compartidas.

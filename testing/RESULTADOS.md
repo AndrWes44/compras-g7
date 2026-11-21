@@ -1,5 +1,11 @@
 # Resultados de Testing y API Integration
 
+## Cierre AWS real — 20 de noviembre de 2026
+
+Cinco perfiles ingresaron por UI y abrieron sus paneles correspondientes. Se comprobaron creacion, lectura y edicion de proveedor/borrador propios. La eliminacion no se acredita porque el borrador termino SUBMITTED. Newman se ejecuto una sola vez: 10 peticiones, 17 aserciones, 14 aprobadas y 3 fallidas en dos consultas que usaron el UUID del borrador en lugar del requestId REQ. Las dos comprobaciones puntuales posteriores con el ID correcto devolvieron 200 y PERSISTED; no se repitio Newman ni se ocultaron los fallos iniciales.
+
+La coleccion exportada se corrigio para capturar el requestId real, sin una nueva corrida completa. Quedaron pendientes decisiones por monto, baja de proveedor e inventario AWS por CLI. Ver [alcance, resultados e informes](evidence/2026-11-20-aws-real/README.md). Las capturas permanecen locales y no se publican credenciales.
+
 ## CRUD local final — 20 de noviembre de 2026
 
 POST 201, GET 200, PUT 200 y DELETE 204 comprobados contra Express y DynamoDB Local 3.3.2, en una tabla nueva exclusiva `G7-TEST-CRUD-solicitudes`. Se verificaron creacion/lectura, cambios de descripcion y monto, preservacion de requestId/fecha/estado, eliminacion real y ausencia posterior. Negativas: IDs inexistentes o invalidos, vacios/null/espacios, montos invalidos, campos protegidos, JSON mal formado, cuerpos ausentes/arrays y restriccion PENDING.
