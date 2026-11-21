@@ -1,0 +1,70 @@
+'use strict';
+const fs=require('node:fs'),path=require('node:path');
+const out=path.resolve(process.argv[2]||path.join(__dirname,'../../outputs/G7-PRUEBAS-CRUD-FINAL'));
+const d=JSON.parse(fs.readFileSync(path.join(out,'resultados-resumen.json')));
+const registro=JSON.parse(fs.readFileSync(path.join(out,'evidencia/registro-ejecucion.json')));
+const date=new Intl.DateTimeFormat('es-SV',{timeZone:'America/El_Salvador',dateStyle:'full',timeStyle:'long'}).format(new Date(d.fechaUTC));
+const text=[
+'# Compras G7 Pruebas CRUD finales','',
+`Fecha de ejecución: ${date}. Registro UTC: ${d.fechaUTC}.`,'',
+`Resultado final: **${d.peticiones} peticiones, ${d.aserciones} aserciones Newman aprobadas, ${d.fallos} fallos**. Seis verificaciones directas en DynamoDB Local y cuatro pruebas de protección de configuración aprobadas.`,
+'', '## Proyecto y diagnóstico','',
+'- Repositorio AURA: `https://github.com/AndrWes44/compras-g7.git`, rama `feature/testing`, base local `5a4c778`. Copia de trabajo localizada en `work/compras-g7`.',
+'- En el Escritorio se encontró `proyecto-final-computo-nube`, una demo distinta con contratos id/centavos, adaptadores memory/sqlite/DynamoDB y perfiles locales. No se modificó ni se usó su base.',
+'- La colección y el entorno pedidos estaban en Descargas. Su contrato coincide con la versión local de `compras-g7`: Express, clave `requestId`, campos `descripcion`, `solicitante`, `departamento`, `monto`, POST 201 y GET 200.',
+'- El servidor original es monolítico: `backend/src/server.js` contiene rutas, validación y llamadas SDK. No hay controladores ni servicios separados. `backend/scripts/crearTablaLocal.js` declara la clave requestId String. El cliente original apunta a `http://127.0.0.1:8000`, con credenciales ficticias local; no usa AWS remoto.',
+'- En esta versión local original no existen PUT, DELETE ni GET por ID. La colección descargada marcaba PUT/DELETE como propuestas pendientes y esperaba erróneamente `data.requestId` en POST: el contrato real devuelve `data.solicitud.requestId`.',
+'', '## Implementación y límites','',
+'Se implementó una variante local aislada en `testing/local-crud/backend/src/server.js`, derivada del servidor local y conservando Express y DynamoDB DocumentClient. El backend compartido original y el despliegue AWS no se modificaron. Las operaciones PUT y DELETE nuevas pertenecen a esta variante ejecutable QA; no se afirma que estén disponibles en producción.',
+'',
+'PUT exige los cuatro campos de negocio y rechaza campos desconocidos. UpdateCommand modifica solo esos campos; requestId, fechaCreacion y estado se preservan. DELETE devuelve 204 sin cuerpo. Ambas operaciones usan condiciones atómicas para rechazar registros inexistentes, registros sin el prefijo de prueba y solicitudes cuyo estado no sea PENDING. Un fallo de condición devuelve 404 si el ID no existe y 409 si hay restricción de estado/registro. No se alteraron umbrales de aprobación.',
+'',
+'La API AURA AWS de la rama feature/backend tiene otro contrato: envío 202 mediante Step Functions, autenticación Cognito, borradores con PATCH y solicitudes enviadas inmutables con anulación. Allí la solución correcta es editar/eliminar borradores antes de enviarlos y anular una compra pendiente; no habilitar PUT ni borrado físico de compras enviadas para satisfacer una colección antigua. No se hicieron peticiones de escritura a esa API.',
+'', '## Entorno ejecutado','',
+`- API local: ${d.baseUrl}, enlace exclusivo a 127.0.0.1.`,
+`- DynamoDB Local ${d.dynamodb.version}: ${d.dynamodb.endpoint}, proceso oficial Java 21 separado, modo inMemory y sharedDb dentro de esa instancia exclusiva.`,
+`- Tabla creada: ${d.dynamodb.tabla}, clave requestId String, capacidad PAY_PER_REQUEST.`,
+`- Newman ${d.newmanVersion}; dependencias instaladas localmente, sin instalaciones globales.`,
+'- El orquestador rechazó una instancia con tablas preexistentes; no se compartieron los puertos 3000/8000 ni las tablas del equipo.',
+'- Los identificadores y datos creados usan G7-TEST-CRUD. La fixture APPROVED se insertó directamente en la instancia QA para comprobar el bloqueo de escrituras; no representa una aprobación humana ejecutada.',
+'- Archivo oficial DynamoDB Local descargado: https://d1ni2b6xgvw0s0.cloudfront.net/v2.x/dynamodb_local_latest.tar.gz. SHA256: `7A94EB65F81AEE270738751A4E5E3E6A7AD02A5D25194F55B83E08EC2BA6342B`.',
+'', '## Registro de la corrida final','',
+'requestId temporal: '+registro.requestId+'.',
+'Prefijo único de ejecución: '+registro.runPrefix+'.',
+'', '## Resultados HTTP ejecutados','',
+'| Caso | Método | Endpoint | Esperado | Obtenido | Estado | Errores |',
+'|---|---|---|---|---|---|---|',
+...d.casos.map(c=>`| ${c.nombre.replaceAll('|','/')} | ${c.metodo} | ${c.endpoint.replace(d.baseUrl,'')} | ${c.esperado} | ${c.status??'SIN RESPUESTA'} | ${c.aprobado?'APROBADO':'FALLIDO'} | ${c.aserciones.filter(a=>!a.aprobado).map(a=>a.error).join('; ')||'Ninguno'} |`),
+'', '## Verificación directa de DynamoDB','',
+'Estas verificaciones usan GetCommand con ConsistentRead y ScanCommand; no dependen únicamente de lo que devuelva Express. Newman se ejecuta en tres fases para leer la base tras POST, tras PUT y tras DELETE antes de avanzar.',
+'',
+...d.verificacionesDirectas.map(v=>`- ${v.prueba}: **${v.aprobado?'APROBADO':'FALLIDO'}**.`),
+'',
+'Se confirmó monto original 999.99, monto actualizado 1000, descripción actualizada e ID/fecha/estado originales. El PUT inexistente no creó registros. La fixture APPROVED permaneció idéntica. DELETE eliminó solo el temporal; la fixture se retiró al terminar mediante su ID y una condición que verificó su descripción exclusiva. La tabla terminó con cero registros. No se eliminaron tablas ni registros del equipo.',
+'', '## Errores encontrados y corregidos','',
+'1. Faltaban PUT, DELETE y lectura individual en el contrato local: implementados y ejecutados en la variante QA.',
+'2. La colección inicial capturaba un requestId en el nivel JSON equivocado: corregida para `solicitud.requestId` y conservación de fechaCreacion.',
+'3. El primer intento pasó 57 peticiones HTTP, pero se detuvo en una comparación de evidencia que esperaba “actualizado” en lugar de “solicitud actualizada”. Era un error del orquestador, no del backend. Se corrigió, se reinició exclusivamente el proceso DynamoDB en memoria creado para esta prueba y se repitió la suite completa. El intento fallido se conserva en evidencia/intento-1 y no se presenta como exitoso.',
+'4. El lanzador Oracle javapath de Windows dejaba una JVM hija abierta tras terminar el script. Se corrigió resolviendo java.home para iniciar y cerrar el ejecutable real; se repitió la suite y se comprobó el cierre de los puertos de QA.',
+'', '## Repetir y revisar','',
+'Requiere Windows, Node.js 22 o posterior, npm, Java 21 y tar. Desde la carpeta `testing/local-crud`, ejecutar:',
+'', '```powershell', '.\Repetir-Pruebas.ps1 -OutputDir "C:\ruta\G7-PRUEBAS-CRUD-FINAL"', '```','',
+'La carpeta de salida debe contener la colección y el entorno importables entregados. El script instala dependencias fijadas, descarga DynamoDB Local si falta, verifica el hash, inicia procesos ocultos en puertos libres y los detiene al terminar. Si los puertos están ocupados o la instancia no está vacía, falla sin detener procesos ajenos. No necesita credenciales AWS reales. También se ejecutó el script de repetición de extremo a extremo durante esta sesión; al finalizar se regeneraron los reportes desde sus resultados reales.',
+'',
+'Para Postman GUI, iniciar la variante QA y usar el entorno local. La fixture protectedId y las verificaciones SDK entre fases las prepara `run.cjs`; ejecutar la colección sin esa preparación no reproduce los casos de estado aprobado. No usar el entorno contra el servidor de un compañero ni contra AWS.',
+'', '## Archivos de evidencia','',
+'- `newman-fase-1.json`, `newman-fase-2.json`, `newman-fase-3.json`: reportes JSON originales del reporter Newman.',
+'- `resultados-resumen.json`: consolidado de peticiones y aserciones, incluyendo respuestas reales.',
+'- `evidencia/dynamodb-verification.json`: lecturas directas de la base y limpieza.',
+'- `evidencia/protecciones-configuracion.tap`: cuatro pruebas de bloqueo de destinos remotos y tablas compartidas.',
+'- `evidencia/registro-ejecucion.json`: IDs temporales y fecha.',
+'- `Reporte-CRUD.html`: reporte HTML generado desde los resultados reales, no una captura de Postman.',
+'- `codigo/`: implementación y herramientas reproducibles; sin node_modules, JAR ni base de datos.',
+'',
+'Se entregan registros verificables en lugar de capturas nuevas. No se almacenan tokens, contraseñas ni claves AWS reales. Las cadenas local del cliente DynamoDB son valores ficticios necesarios para el protocolo de DynamoDB Local.',
+];
+fs.writeFileSync(path.join(out,'Reporte-Pruebas-CRUD.md'),text.join('\n')+'\n');
+const escape=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const rows=d.casos.map(c=>`<tr><td>${escape(c.nombre)}</td><td>${escape(c.metodo)}</td><td><code>${escape(c.endpoint.replace(d.baseUrl,''))}</code></td><td>${escape(c.esperado)}</td><td>${c.status}</td><td>${c.aprobado?'APROBADO':'FALLIDO'}</td><td><details><summary>Respuesta y aserciones</summary><pre>${escape(c.body)}</pre><pre>${escape(JSON.stringify(c.aserciones,null,2))}</pre></details></td></tr>`).join('');
+fs.writeFileSync(path.join(out,'Reporte-CRUD.html'),`<!doctype html><html lang="es"><meta charset="utf-8"><title>Compras G7 Pruebas CRUD</title><style>body{font:15px system-ui;margin:32px;color:#172537;background:#f5f7fa}main{max-width:1450px;margin:auto}h1{font-size:30px}table{border-collapse:collapse;background:white;width:100%}td,th{padding:10px;border:1px solid #d9dfe7;text-align:left;vertical-align:top}th{background:#172537;color:white}tr:nth-child(even){background:#f1f5fa}code,pre{white-space:pre-wrap;overflow-wrap:anywhere}pre{max-width:600px;font:12px monospace}p{line-height:1.6}</style><main><h1>Compras G7 Pruebas CRUD locales</h1><p>${escape(date)} · ${d.peticiones} peticiones · ${d.aserciones} aserciones aprobadas · ${d.fallos} fallos.<br>API ${escape(d.baseUrl)} · DynamoDB Local ${escape(d.dynamodb.endpoint)}. No se probó ni modificó AWS remoto.</p><h2>Verificaciones directas de persistencia</h2><ul>${d.verificacionesDirectas.map(v=>`<li>${escape(v.prueba)}: ${v.aprobado?'APROBADO':'FALLIDO'}</li>`).join('')}</ul><h2>Resultados HTTP</h2><table><thead><tr><th>Caso</th><th>Método</th><th>Endpoint</th><th>Esperado</th><th>Obtenido</th><th>Estado</th><th>Evidencia</th></tr></thead><tbody>${rows}</tbody></table><p>El primer intento fallido se conserva por separado. Implementación solo local de QA; las compras enviadas de AURA AWS conservan sus reglas de inmutabilidad y anulación.</p></main></html>`);
+console.log(JSON.stringify({peticiones:d.peticiones,aserciones:d.aserciones,fallos:d.fallos,verificacionesDirectas:d.verificacionesDirectas.length}));

@@ -1,5 +1,15 @@
 # Resultados de Testing y API Integration
 
+## CRUD local final — 20 de noviembre de 2026
+
+POST 201, GET 200, PUT 200 y DELETE 204 comprobados contra Express y DynamoDB Local 3.3.2, en una tabla nueva exclusiva `G7-TEST-CRUD-solicitudes`. Se verificaron creacion/lectura, cambios de descripcion y monto, preservacion de requestId/fecha/estado, eliminacion real y ausencia posterior. Negativas: IDs inexistentes o invalidos, vacios/null/espacios, montos invalidos, campos protegidos, JSON mal formado, cuerpos ausentes/arrays y restriccion PENDING.
+
+Corrida final: **61 peticiones, 75 aserciones Newman aprobadas, 0 fallos; 6 verificaciones directas de DynamoDB conformes y 4 pruebas de configuracion conformes**. La tabla termino con cero registros. El intento inicial se detuvo por un texto esperado incorrecto del orquestador; esta conservado como fallido y la corrida completa posterior es la evidencia final.
+
+Las rutas PUT/DELETE pertenecen al backend local QA incluido en `testing/local-crud`, no al backend AURA desplegado. La API AWS conserva sus reglas de borradores PATCH y anulacion. No hubo operaciones sobre AWS remoto, configuraciones compartidas ni registros de companeros.
+
+Ver [reporte completo](evidence/2026-11-20-crud/Reporte-Pruebas-CRUD.md), [HTML](evidence/2026-11-20-crud/Reporte-CRUD.html) y [resumen verificable](evidence/2026-11-20-crud/resultados-resumen.json).
+
 ## AWS autenticado — 14 de noviembre de 2026
 
 Con las cuentas QA de Solicitante, Gerente, Director y Compras, Collection Runner de Postman completo 36 peticiones y 44 aserciones aprobadas, sin fallos ni errores (57s 314ms). Otra corrida HTTP Python independiente verifico 36 comprobaciones conformes. No sumar ambas como si fueran casos distintos.

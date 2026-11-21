@@ -1,5 +1,15 @@
 # Testing y API Integration - Diego
 
+## Cierre CRUD local del 20 de noviembre de 2026
+
+La suite local completa esta en `testing/local-crud` y usa una instancia oficial de DynamoDB Local aislada, sin mocks ni AWS remoto. Se ejecutaron 61 peticiones, 75 aserciones Newman y seis lecturas/verificaciones directas de DynamoDB, con cero fallos en la corrida final. Otras cuatro pruebas verifican que la configuracion rechace destinos remotos y tablas compartidas.
+
+Coleccion: `postman/G7-Compras-CRUD.postman_collection.json`. Entorno sin secretos: `postman/G7-entorno-ejemplo.postman_environment.json`. Reporte y resultados originales: [evidencia CRUD final](evidence/2026-11-20-crud/Reporte-Pruebas-CRUD.md).
+
+PUT y DELETE se implementaron en la variante **local QA** `testing/local-crud/backend/src/server.js`. No se modifico el backend compartido ni se habilito editar/borrar compras enviadas en AURA AWS. Solo se crean registros G7-TEST-CRUD; las mutaciones exigen PENDING y preservan requestId/fechaCreacion. La tabla de prueba termino vacia.
+
+Para repetir, copiar la coleccion y el entorno a una carpeta de salida y ejecutar `testing/local-crud/Repetir-Pruebas.ps1 -OutputDir "C:\ruta\G7-PRUEBAS-CRUD-FINAL"`. Requiere Node.js 22+, npm, Java 21 y tar. El script no detiene procesos ajenos ni usa tablas preexistentes. El primer intento, fallido por una comparacion del orquestador, se conserva separado de la corrida final.
+
 ## Pruebas AWS actuales
 
 La suite autenticada esta en `postman/aura-aws-autenticadas.postman_collection.json`; requiere variables privadas de contrasena para los cuatro roles QA. Ejecutar en orden, una iteracion, demora de 1000 ms y sin conservar variables al terminar. Crea una compra QA y la anula; tambien crea un proveedor QA que se conserva como evidencia. No ejecutar sobre datos de terceros. Resultados reales: [36 peticiones y 44 aserciones aprobadas en Postman](evidence/2026-11-14-aws-auth/README.md).

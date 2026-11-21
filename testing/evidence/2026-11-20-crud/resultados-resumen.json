@@ -1,0 +1,1271 @@
+{
+  "fechaUTC": "2026-11-21T04:43:28.001Z",
+  "baseUrl": "http://127.0.0.1:13000",
+  "dynamodb": {
+    "endpoint": "http://127.0.0.1:18000",
+    "tabla": "G7-TEST-CRUD-solicitudes",
+    "version": "3.3.2",
+    "modo": "inMemory"
+  },
+  "newmanVersion": "6.2.1",
+  "prefijo": "G7-TEST-CRUD-17da11ed-90fb-4a52-bc49-f33dff34237a",
+  "completado": true,
+  "peticiones": 61,
+  "aserciones": 75,
+  "fallos": 0,
+  "verificacionesDirectas": [
+    {
+      "prueba": "POST guardado en DynamoDB Local",
+      "fechaUTC": "2026-11-21T04:43:19.450Z",
+      "detalle": {
+        "descripcion": "G7-TEST-CRUD-17da11ed-90fb-4a52-bc49-f33dff34237a solicitud temporal",
+        "estado": "PENDING",
+        "monto": 999.99,
+        "requestId": "G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+        "solicitante": "G7-TEST-CRUD-17da11ed-90fb-4a52-bc49-f33dff34237a solicitante",
+        "departamento": "G7-TEST-CRUD QA",
+        "fechaCreacion": "2026-11-21T04:43:18.862Z"
+      },
+      "aprobado": true
+    },
+    {
+      "prueba": "PUT persistido preserva requestId fecha y estado",
+      "fechaUTC": "2026-11-21T04:43:27.216Z",
+      "detalle": {
+        "descripcion": "G7-TEST-CRUD-17da11ed-90fb-4a52-bc49-f33dff34237a solicitud actualizada",
+        "estado": "PENDING",
+        "monto": 1000,
+        "requestId": "G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+        "solicitante": "G7-TEST-CRUD-17da11ed-90fb-4a52-bc49-f33dff34237a solicitante",
+        "departamento": "G7-TEST-CRUD QA",
+        "fechaCreacion": "2026-11-21T04:43:18.862Z"
+      },
+      "aprobado": true
+    },
+    {
+      "prueba": "PUT inexistente no crea un registro",
+      "fechaUTC": "2026-11-21T04:43:27.230Z",
+      "detalle": {
+        "requestId": "G7-TEST-CRUD-00000000-0000-4000-8000-000000000001",
+        "existe": false
+      },
+      "aprobado": true
+    },
+    {
+      "prueba": "Solicitud aprobada no cambio",
+      "fechaUTC": "2026-11-21T04:43:27.240Z",
+      "detalle": {
+        "requestId": "G7-TEST-CRUD-f596c383-19a2-492c-89e7-94ed00985833",
+        "estado": "APPROVED",
+        "sinCambios": true
+      },
+      "aprobado": true
+    },
+    {
+      "prueba": "DELETE confirmado por lectura consistente DynamoDB",
+      "fechaUTC": "2026-11-21T04:43:27.961Z",
+      "detalle": {
+        "requestId": "G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+        "existe": false
+      },
+      "aprobado": true
+    },
+    {
+      "prueba": "Limpieza tabla QA sin registros restantes",
+      "fechaUTC": "2026-11-21T04:43:27.991Z",
+      "detalle": {
+        "registrosRestantes": 0
+      },
+      "aprobado": true
+    }
+  ],
+  "phases": [
+    {
+      "fase": "01 CREATE READ",
+      "stats": {
+        "iterations": {
+          "total": 1,
+          "pending": 0,
+          "failed": 0
+        },
+        "items": {
+          "total": 4,
+          "pending": 0,
+          "failed": 0
+        },
+        "scripts": {
+          "total": 8,
+          "pending": 0,
+          "failed": 0
+        },
+        "prerequests": {
+          "total": 4,
+          "pending": 0,
+          "failed": 0
+        },
+        "requests": {
+          "total": 4,
+          "pending": 0,
+          "failed": 0
+        },
+        "tests": {
+          "total": 4,
+          "pending": 0,
+          "failed": 0
+        },
+        "assertions": {
+          "total": 8,
+          "pending": 0,
+          "failed": 0
+        },
+        "testScripts": {
+          "total": 4,
+          "pending": 0,
+          "failed": 0
+        },
+        "prerequestScripts": {
+          "total": 4,
+          "pending": 0,
+          "failed": 0
+        }
+      },
+      "fallos": []
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "stats": {
+        "iterations": {
+          "total": 1,
+          "pending": 0,
+          "failed": 0
+        },
+        "items": {
+          "total": 53,
+          "pending": 0,
+          "failed": 0
+        },
+        "scripts": {
+          "total": 106,
+          "pending": 0,
+          "failed": 0
+        },
+        "prerequests": {
+          "total": 53,
+          "pending": 0,
+          "failed": 0
+        },
+        "requests": {
+          "total": 53,
+          "pending": 0,
+          "failed": 0
+        },
+        "tests": {
+          "total": 53,
+          "pending": 0,
+          "failed": 0
+        },
+        "assertions": {
+          "total": 61,
+          "pending": 0,
+          "failed": 0
+        },
+        "testScripts": {
+          "total": 53,
+          "pending": 0,
+          "failed": 0
+        },
+        "prerequestScripts": {
+          "total": 53,
+          "pending": 0,
+          "failed": 0
+        }
+      },
+      "fallos": []
+    },
+    {
+      "fase": "03 DELETE READ",
+      "stats": {
+        "iterations": {
+          "total": 1,
+          "pending": 0,
+          "failed": 0
+        },
+        "items": {
+          "total": 4,
+          "pending": 0,
+          "failed": 0
+        },
+        "scripts": {
+          "total": 8,
+          "pending": 0,
+          "failed": 0
+        },
+        "prerequests": {
+          "total": 4,
+          "pending": 0,
+          "failed": 0
+        },
+        "requests": {
+          "total": 4,
+          "pending": 0,
+          "failed": 0
+        },
+        "tests": {
+          "total": 4,
+          "pending": 0,
+          "failed": 0
+        },
+        "assertions": {
+          "total": 6,
+          "pending": 0,
+          "failed": 0
+        },
+        "testScripts": {
+          "total": 4,
+          "pending": 0,
+          "failed": 0
+        },
+        "prerequestScripts": {
+          "total": 4,
+          "pending": 0,
+          "failed": 0
+        }
+      },
+      "fallos": []
+    }
+  ],
+  "casos": [
+    {
+      "fase": "01 CREATE READ",
+      "nombre": "01 Salud y entorno aislado",
+      "metodo": "GET",
+      "endpoint": "http://127.0.0.1:13000/health",
+      "status": 200,
+      "esperado": "HTTP 200",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 200",
+          "aprobado": true
+        },
+        {
+          "nombre": "Backend local de QA",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Backend del Grupo 7 funcionando\",\"estado\":\"OK\",\"modo\":\"QA_LOCAL\",\"tabla\":\"G7-TEST-CRUD-solicitudes\"}"
+    },
+    {
+      "fase": "01 CREATE READ",
+      "nombre": "02 POST crear temporal",
+      "metodo": "POST",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes",
+      "status": 201,
+      "esperado": "HTTP 201",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 201",
+          "aprobado": true
+        },
+        {
+          "nombre": "ID temporal y datos originales",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Solicitud creada correctamente\",\"solicitud\":{\"requestId\":\"G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941\",\"descripcion\":\"G7-TEST-CRUD-17da11ed-90fb-4a52-bc49-f33dff34237a solicitud temporal\",\"solicitante\":\"G7-TEST-CRUD-17da11ed-90fb-4a52-bc49-f33dff34237a solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"monto\":999.99,\"estado\":\"PENDING\",\"fechaCreacion\":\"2026-11-21T04:43:18.862Z\"}}"
+    },
+    {
+      "fase": "01 CREATE READ",
+      "nombre": "03 GET listado contiene temporal",
+      "metodo": "GET",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes",
+      "status": 200,
+      "esperado": "HTTP 200",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 200",
+          "aprobado": true
+        },
+        {
+          "nombre": "Registro creado en listado",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"total\":2,\"solicitudes\":[{\"descripcion\":\"G7-TEST-CRUD-17da11ed-90fb-4a52-bc49-f33dff34237a solicitud temporal\",\"estado\":\"PENDING\",\"monto\":999.99,\"requestId\":\"G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941\",\"solicitante\":\"G7-TEST-CRUD-17da11ed-90fb-4a52-bc49-f33dff34237a solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"fechaCreacion\":\"2026-11-21T04:43:18.862Z\"},{\"descripcion\":\"G7-TEST-CRUD-17da11ed-90fb-4a52-bc49-f33dff34237a fixture aprobada no modificar\",\"estado\":\"APPROVED\",\"monto\":25,\"requestId\":\"G7-TEST-CRUD-f596c383-19a2-492c-89e7-94ed00985833\",\"solicitante\":\"G7-TEST-CRUD-17da11ed-90fb-4a52-bc49-f33dff34237a QA\",\"departamento\":\"QA\",\"fechaCreacion\":\"2026-11-21T04:43:15.752Z\"}]}"
+    },
+    {
+      "fase": "01 CREATE READ",
+      "nombre": "04 GET por requestId",
+      "metodo": "GET",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+      "status": 200,
+      "esperado": "HTTP 200",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 200",
+          "aprobado": true
+        },
+        {
+          "nombre": "ID y fecha originales conservados",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"solicitud\":{\"descripcion\":\"G7-TEST-CRUD-17da11ed-90fb-4a52-bc49-f33dff34237a solicitud temporal\",\"estado\":\"PENDING\",\"monto\":999.99,\"requestId\":\"G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941\",\"solicitante\":\"G7-TEST-CRUD-17da11ed-90fb-4a52-bc49-f33dff34237a solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"fechaCreacion\":\"2026-11-21T04:43:18.862Z\"}}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "05 PUT actualizar descripcion y monto",
+      "metodo": "PUT",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+      "status": 200,
+      "esperado": "HTTP 200",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 200",
+          "aprobado": true
+        },
+        {
+          "nombre": "ID y fecha originales conservados",
+          "aprobado": true
+        },
+        {
+          "nombre": "Descripcion y monto actualizados",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Solicitud actualizada correctamente\",\"solicitud\":{\"descripcion\":\"G7-TEST-CRUD-17da11ed-90fb-4a52-bc49-f33dff34237a solicitud actualizada\",\"estado\":\"PENDING\",\"monto\":1000,\"requestId\":\"G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941\",\"solicitante\":\"G7-TEST-CRUD-17da11ed-90fb-4a52-bc49-f33dff34237a solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"fechaCreacion\":\"2026-11-21T04:43:18.862Z\"}}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "06 GET listado confirma actualizacion",
+      "metodo": "GET",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes",
+      "status": 200,
+      "esperado": "HTTP 200",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 200",
+          "aprobado": true
+        },
+        {
+          "nombre": "Cambios almacenados en listado",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"total\":2,\"solicitudes\":[{\"descripcion\":\"G7-TEST-CRUD-17da11ed-90fb-4a52-bc49-f33dff34237a solicitud actualizada\",\"estado\":\"PENDING\",\"monto\":1000,\"requestId\":\"G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941\",\"solicitante\":\"G7-TEST-CRUD-17da11ed-90fb-4a52-bc49-f33dff34237a solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"fechaCreacion\":\"2026-11-21T04:43:18.862Z\"},{\"descripcion\":\"G7-TEST-CRUD-17da11ed-90fb-4a52-bc49-f33dff34237a fixture aprobada no modificar\",\"estado\":\"APPROVED\",\"monto\":25,\"requestId\":\"G7-TEST-CRUD-f596c383-19a2-492c-89e7-94ed00985833\",\"solicitante\":\"G7-TEST-CRUD-17da11ed-90fb-4a52-bc49-f33dff34237a QA\",\"departamento\":\"QA\",\"fechaCreacion\":\"2026-11-21T04:43:15.752Z\"}]}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "07 GET individual confirma actualizacion",
+      "metodo": "GET",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+      "status": 200,
+      "esperado": "HTTP 200",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 200",
+          "aprobado": true
+        },
+        {
+          "nombre": "ID y fecha originales conservados",
+          "aprobado": true
+        },
+        {
+          "nombre": "Descripcion y monto actualizados",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"solicitud\":{\"descripcion\":\"G7-TEST-CRUD-17da11ed-90fb-4a52-bc49-f33dff34237a solicitud actualizada\",\"estado\":\"PENDING\",\"monto\":1000,\"requestId\":\"G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941\",\"solicitante\":\"G7-TEST-CRUD-17da11ed-90fb-4a52-bc49-f33dff34237a solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"fechaCreacion\":\"2026-11-21T04:43:18.862Z\"}}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "08 GET ID inexistente",
+      "metodo": "GET",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-00000000-0000-4000-8000-000000000001",
+      "status": 404,
+      "esperado": "HTTP 404",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 404",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Solicitud no encontrada.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "09 PUT ID inexistente no crea registro",
+      "metodo": "PUT",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-00000000-0000-4000-8000-000000000001",
+      "status": 404,
+      "esperado": "HTTP 404",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 404",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Solicitud no encontrada.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "10 DELETE ID inexistente",
+      "metodo": "DELETE",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-00000000-0000-4000-8000-000000000001",
+      "status": 404,
+      "esperado": "HTTP 404",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 404",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Solicitud no encontrada.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "POST descripcion \"\"",
+      "metodo": "POST",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "POST descripcion null",
+      "metodo": "POST",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "POST descripcion \"   \"",
+      "metodo": "POST",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "POST solicitante \"\"",
+      "metodo": "POST",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "POST solicitante null",
+      "metodo": "POST",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "POST solicitante \"   \"",
+      "metodo": "POST",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "POST departamento \"\"",
+      "metodo": "POST",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "POST departamento null",
+      "metodo": "POST",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "POST departamento \"   \"",
+      "metodo": "POST",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "POST monto invalido 0",
+      "metodo": "POST",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "POST monto invalido -1",
+      "metodo": "POST",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "POST monto invalido \"100\"",
+      "metodo": "POST",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "POST monto invalido null",
+      "metodo": "POST",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "POST monto ausente",
+      "metodo": "POST",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "POST JSON mal formado",
+      "metodo": "POST",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"JSON mal formado.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "POST array mal formado para contrato",
+      "metodo": "POST",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "POST cuerpo ausente",
+      "metodo": "POST",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "POST sin prefijo QA",
+      "metodo": "POST",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes",
+      "status": 403,
+      "esperado": "HTTP 403",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 403",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Solo se crean registros temporales G7-TEST-CRUD en este entorno.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "PUT descripcion \"\"",
+      "metodo": "PUT",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "PUT descripcion null",
+      "metodo": "PUT",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "PUT descripcion \"   \"",
+      "metodo": "PUT",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "PUT solicitante \"\"",
+      "metodo": "PUT",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "PUT solicitante null",
+      "metodo": "PUT",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "PUT solicitante \"   \"",
+      "metodo": "PUT",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "PUT departamento \"\"",
+      "metodo": "PUT",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "PUT departamento null",
+      "metodo": "PUT",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "PUT departamento \"   \"",
+      "metodo": "PUT",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "PUT monto invalido 0",
+      "metodo": "PUT",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "PUT monto invalido -1",
+      "metodo": "PUT",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "PUT monto invalido \"100\"",
+      "metodo": "PUT",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "PUT monto invalido null",
+      "metodo": "PUT",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "PUT monto ausente",
+      "metodo": "PUT",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "PUT JSON mal formado",
+      "metodo": "PUT",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"JSON mal formado.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "PUT array mal formado para contrato",
+      "metodo": "PUT",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "PUT cuerpo ausente",
+      "metodo": "PUT",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "PUT sin prefijo QA",
+      "metodo": "PUT",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+      "status": 403,
+      "esperado": "HTTP 403",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 403",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"El registro debe conservar el prefijo G7-TEST-CRUD.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "PUT rechaza campo protegido requestId",
+      "metodo": "PUT",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "PUT rechaza campo protegido fechaCreacion",
+      "metodo": "PUT",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "PUT rechaza campo protegido estado",
+      "metodo": "PUT",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Datos invalidos: descripcion, solicitante y departamento no vacios; monto numerico positivo; sin campos adicionales.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "PUT ID mal formado",
+      "metodo": "PUT",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/no-es-id",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"requestId de prueba invalido.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "DELETE ID mal formado",
+      "metodo": "DELETE",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/no-es-id",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"requestId de prueba invalido.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "GET ID mal formado",
+      "metodo": "GET",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/no-es-id",
+      "status": 400,
+      "esperado": "HTTP 400",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 400",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"requestId de prueba invalido.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "POST payload demasiado grande",
+      "metodo": "POST",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes",
+      "status": 413,
+      "esperado": "HTTP 413",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 413",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Cuerpo demasiado grande.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "PUT registro aprobado protegido",
+      "metodo": "PUT",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-f596c383-19a2-492c-89e7-94ed00985833",
+      "status": 409,
+      "esperado": "HTTP 409",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 409",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Solo se modifica una solicitud QA propia en PENDING.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "DELETE registro aprobado protegido",
+      "metodo": "DELETE",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-f596c383-19a2-492c-89e7-94ed00985833",
+      "status": 409,
+      "esperado": "HTTP 409",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 409",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Solo se elimina una solicitud QA propia en PENDING.\"}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "GET registro aprobado sigue intacto",
+      "metodo": "GET",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-f596c383-19a2-492c-89e7-94ed00985833",
+      "status": 200,
+      "esperado": "HTTP 200",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 200",
+          "aprobado": true
+        },
+        {
+          "nombre": "Estado APPROVED conservado",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"solicitud\":{\"descripcion\":\"G7-TEST-CRUD-17da11ed-90fb-4a52-bc49-f33dff34237a fixture aprobada no modificar\",\"estado\":\"APPROVED\",\"monto\":25,\"requestId\":\"G7-TEST-CRUD-f596c383-19a2-492c-89e7-94ed00985833\",\"solicitante\":\"G7-TEST-CRUD-17da11ed-90fb-4a52-bc49-f33dff34237a QA\",\"departamento\":\"QA\",\"fechaCreacion\":\"2026-11-21T04:43:15.752Z\"}}"
+    },
+    {
+      "fase": "02 UPDATE NEGATIVAS",
+      "nombre": "GET temporal intacto tras entradas invalidas",
+      "metodo": "GET",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+      "status": 200,
+      "esperado": "HTTP 200",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 200",
+          "aprobado": true
+        },
+        {
+          "nombre": "ID y fecha originales conservados",
+          "aprobado": true
+        },
+        {
+          "nombre": "Descripcion y monto actualizados",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"solicitud\":{\"descripcion\":\"G7-TEST-CRUD-17da11ed-90fb-4a52-bc49-f33dff34237a solicitud actualizada\",\"estado\":\"PENDING\",\"monto\":1000,\"requestId\":\"G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941\",\"solicitante\":\"G7-TEST-CRUD-17da11ed-90fb-4a52-bc49-f33dff34237a solicitante\",\"departamento\":\"G7-TEST-CRUD QA\",\"fechaCreacion\":\"2026-11-21T04:43:18.862Z\"}}"
+    },
+    {
+      "fase": "03 DELETE READ",
+      "nombre": "DELETE exclusivamente el temporal creado",
+      "metodo": "DELETE",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+      "status": 204,
+      "esperado": "HTTP 204",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 204",
+          "aprobado": true
+        },
+        {
+          "nombre": "Respuesta sin cuerpo",
+          "aprobado": true
+        }
+      ],
+      "body": ""
+    },
+    {
+      "fase": "03 DELETE READ",
+      "nombre": "GET eliminado devuelve 404",
+      "metodo": "GET",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+      "status": 404,
+      "esperado": "HTTP 404",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 404",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Solicitud no encontrada.\"}"
+    },
+    {
+      "fase": "03 DELETE READ",
+      "nombre": "GET listado ya no contiene temporal",
+      "metodo": "GET",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes",
+      "status": 200,
+      "esperado": "HTTP 200",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 200",
+          "aprobado": true
+        },
+        {
+          "nombre": "Registro temporal ausente",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"total\":1,\"solicitudes\":[{\"descripcion\":\"G7-TEST-CRUD-17da11ed-90fb-4a52-bc49-f33dff34237a fixture aprobada no modificar\",\"estado\":\"APPROVED\",\"monto\":25,\"requestId\":\"G7-TEST-CRUD-f596c383-19a2-492c-89e7-94ed00985833\",\"solicitante\":\"G7-TEST-CRUD-17da11ed-90fb-4a52-bc49-f33dff34237a QA\",\"departamento\":\"QA\",\"fechaCreacion\":\"2026-11-21T04:43:15.752Z\"}]}"
+    },
+    {
+      "fase": "03 DELETE READ",
+      "nombre": "DELETE repetido devuelve 404",
+      "metodo": "DELETE",
+      "endpoint": "http://127.0.0.1:13000/api/solicitudes/G7-TEST-CRUD-a4da0419-9faa-461d-b009-b3a38c777941",
+      "status": 404,
+      "esperado": "HTTP 404",
+      "aprobado": true,
+      "aserciones": [
+        {
+          "nombre": "HTTP 404",
+          "aprobado": true
+        }
+      ],
+      "body": "{\"mensaje\":\"Solicitud no encontrada.\"}"
+    }
+  ]
+}
