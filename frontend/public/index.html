@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-900">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>AURA Compras — Sistema de Gestión y Aprobaciones</title>
+  
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            aura: {
+              canvas: '#0F172A',     // Slate 900
+              sidebar: '#0B1120',    // Slate 950
+              card: '#1E293B',       // Slate 800
+              cardHover: '#26334D',
+              border: '#334155',     // Slate 700
+              input: '#0F172A',
+              primary: '#2563EB',    // Blue 600
+              primaryHover: '#1D4ED8',
+              accent: '#38BDF8',     // Sky 400
+              success: '#10B981',    // Emerald 500
+              warning: '#F59E0B',    // Amber 500
+              danger: '#EF4444',     // Red 500
+              purple: '#8B5CF6'      // Violet 500
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    /* Custom scrollbar for Dark Slate UI */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0B1120;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+  </style>
+</head>
+<body class="h-full bg-aura-canvas text-slate-100 font-sans antialiased overflow-hidden select-none">
+  <div id="app" class="h-full w-full"></div>
+
+  <!-- Notification Toast Container -->
+  <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- AURA Compras Client Modules (Versionados con Cache-Busting v1.2.0) -->
+  <script src="/config.js?v=1.2.0"></script>
+  <script src="/auth.js?v=1.2.0"></script>
+  <script src="/api.js?v=1.2.0"></script>
+  <script src="/app.js?v=1.2.0"></script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+{
+  "name": "g7-dev-start-workflow",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Lambda start-workflow para Grupo 7",
+  "main": "index.js"
+}

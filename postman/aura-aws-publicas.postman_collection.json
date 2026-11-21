@@ -1,0 +1,206 @@
+{
+  "info": {
+    "name": "AURA AWS - QA publico 2026-11-14",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Pruebas publicas contra AWS. No certifican flujos autenticados ni demuestran por si solas la llamada interna a Cognito."
+  },
+  "item": [
+    {
+      "name": "01 Salud API",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "https://6pkbutuqre.execute-api.us-east-2.amazonaws.com/health",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Solicitudes sin token",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "https://6pkbutuqre.execute-api.us-east-2.amazonaws.com/api/solicitudes",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 Borradores sin token",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "https://6pkbutuqre.execute-api.us-east-2.amazonaws.com/api/borradores",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 Token invalido",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer invalid-test-token"
+          }
+        ],
+        "url": "https://6pkbutuqre.execute-api.us-east-2.amazonaws.com/api/auth/me",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 CORS permitido",
+      "request": {
+        "method": "OPTIONS",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "http://g7-dev-frontend-aura-021686096746.s3-website.us-east-2.amazonaws.com"
+          },
+          {
+            "key": "Access-Control-Request-Method",
+            "value": "PATCH"
+          },
+          {
+            "key": "Access-Control-Request-Headers",
+            "value": "authorization,content-type"
+          }
+        ],
+        "url": "https://6pkbutuqre.execute-api.us-east-2.amazonaws.com/api/borradores",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 204\", function () { pm.response.to.have.status(204); });",
+              "pm.test(\"Origen exacto autorizado\",()=>pm.expect(pm.response.headers.get(\"Access-Control-Allow-Origin\")).to.eql(\"http://g7-dev-frontend-aura-021686096746.s3-website.us-east-2.amazonaws.com\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 CORS origen ajeno",
+      "request": {
+        "method": "OPTIONS",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "https://example.com"
+          },
+          {
+            "key": "Access-Control-Request-Method",
+            "value": "PATCH"
+          }
+        ],
+        "url": "https://6pkbutuqre.execute-api.us-east-2.amazonaws.com/api/borradores",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });",
+              "pm.test(\"Origen ajeno no autorizado\",()=>pm.expect(pm.response.headers.get(\"Access-Control-Allow-Origin\")).not.to.be.oneOf([\"*\",\"https://example.com\"]));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 Login correo inexistente",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "https://6pkbutuqre.execute-api.us-east-2.amazonaws.com/api/auth/login",
+        "auth": {
+          "type": "noauth"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"usuario_falso@g7.com\", \"password\": \"123456\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

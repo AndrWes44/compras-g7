@@ -1,0 +1,7 @@
+{
+  "name": "g7-dev-evaluate-amount",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Lambda evaluate-amount para Grupo 7",
+  "main": "index.js"
+}
