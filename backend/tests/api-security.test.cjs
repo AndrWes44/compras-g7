@@ -1,3 +1,4 @@
+// Comprueba autenticación, permisos y validación de entradas de la API.
 "use strict";
 const { test } = require("node:test");
 const assert = require("node:assert/strict");

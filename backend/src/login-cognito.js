@@ -1,4 +1,5 @@
 'use strict';
+// Define el inicio de sesión del módulo de autenticación anterior.
 
 const express = require('express');
 

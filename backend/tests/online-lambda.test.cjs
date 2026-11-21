@@ -1,3 +1,4 @@
+// Prueba las rutas de negocio a través del adaptador de Lambda.
 "use strict";
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const serverless=require('@codegenie/serverless-express');

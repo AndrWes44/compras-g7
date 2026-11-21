@@ -1,3 +1,4 @@
+// Prueba la persistencia y las versiones de borradores y proveedores.
 "use strict";
 const { test } = require("node:test");
 const assert = require("node:assert/strict");

@@ -17,9 +17,7 @@ const {
   GetUserCommand
 } = require('@aws-sdk/client-cognito-identity-provider');
 
-// ==========================================
-// CONFIGURACIÓN COGNITO
-// ==========================================
+// Configura la validación de tokens y el cliente de identidad.
 
 const REGION = process.env.AWS_REGION || 'us-east-2';
 
@@ -50,9 +48,7 @@ const ROLES_VALIDOS = new Set([
   'Compras'
 ]);
 
-// ==========================================
-// CLASIFICAR ERRORES JWT
-// ==========================================
+// Distingue tokens inválidos de errores del servicio.
 
 function esTokenInvalido(error) {
   return (
@@ -65,9 +61,7 @@ function esTokenInvalido(error) {
   );
 }
 
-// ==========================================
-// MIDDLEWARE DE AUTENTICACIÓN
-// ==========================================
+// Valida el token y carga la identidad de la petición.
 
 async function autenticar(req, res, next) {
   const encabezado = req.get('Authorization') || '';
@@ -85,9 +79,7 @@ async function autenticar(req, res, next) {
 
   const token = coincidencia[1];
 
-  // ========================================
-  // 1. VERIFICAR FIRMA Y CLAIMS DEL JWT
-  // ========================================
+  // Comprueba la firma y los atributos del token.
 
   let claims;
 
@@ -113,9 +105,7 @@ async function autenticar(req, res, next) {
     });
   }
 
-  // ========================================
-  // 2. OBTENER ROLES DE COGNITO
-  // ========================================
+  // Conserva únicamente los roles autorizados de la cuenta.
 
   const grupos = Array.isArray(
     claims['cognito:groups']
@@ -134,9 +124,7 @@ async function autenticar(req, res, next) {
     });
   }
 
-  // ========================================
-  // 3. OBTENER CORREO VERIFICADO
-  // ========================================
+  // Consulta el correo y comprueba su verificación.
 
   let respuesta;
 
@@ -195,9 +183,7 @@ async function autenticar(req, res, next) {
     });
   }
 
-  // ========================================
-  // 4. GUARDAR IDENTIDAD AUTENTICADA
-  // ========================================
+  // Adjunta la identidad validada a la petición.
 
   req.usuario = {
     sub: claims.sub,
@@ -208,9 +194,7 @@ async function autenticar(req, res, next) {
   return next();
 }
 
-// ==========================================
-// MIDDLEWARE DE AUTORIZACIÓN POR ROL
-// ==========================================
+// Restringe la ruta a los roles permitidos.
 
 function permitirRoles(...rolesPermitidos) {
   return (req, res, next) => {
@@ -236,9 +220,7 @@ function permitirRoles(...rolesPermitidos) {
   };
 }
 
-// ==========================================
-// EXPORTACIONES
-// ==========================================
+// Exporta los controles de autenticación y permisos.
 
 module.exports = {
   autenticar,

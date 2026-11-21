@@ -1,3 +1,4 @@
+// Comprueba las condiciones de escritura y la conservación del historial.
 "use strict";
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const {createStore,contracts:C}=require('../src/server').internals;

@@ -1,3 +1,4 @@
+// Prueba los flujos HTTP de borradores, proveedores y cuentas.
 "use strict";
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const {once}=require('node:events');

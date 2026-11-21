@@ -1,3 +1,4 @@
+// Comprueba el arranque y los fallos de registro de solicitudes.
 "use strict";
 const { test } = require("node:test");
 const assert = require("node:assert/strict");

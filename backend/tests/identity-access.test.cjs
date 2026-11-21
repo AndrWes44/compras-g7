@@ -1,3 +1,4 @@
+// Comprueba el acceso de cuentas registradas y administradores.
 "use strict";
 const { test } = require("node:test");
 const assert = require("node:assert/strict");

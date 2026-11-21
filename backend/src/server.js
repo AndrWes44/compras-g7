@@ -1,7 +1,8 @@
 "use strict";
-// AURA backend: bundled internal modules; no frontend or AWS resources are included.
+// Reúne los módulos de la API en un único archivo de producción.
 const nativeRequire = require;
 const bundledModules = {
+// Valida solicitudes, importes y permisos de aprobación.
 "./contracts.cjs": function(module,exports,require){
 (function (root, factory) {
   if (typeof module === "object" && module.exports) module.exports = factory();
@@ -170,7 +171,7 @@ const bundledModules = {
     );
   }
   function canDecide(doc, user) {
-    // Old records can bypass the validation performed on new requests.
+    // Revisa también los importes de registros anteriores al contrato actual.
     try { cents(doc.amount); }
     catch { return false; }
     return (
@@ -199,6 +200,7 @@ const bundledModules = {
 });
 
 },
+// Valida los datos de borradores y proveedores.
 "./business-contracts": function(module,exports,require){
 "use strict";
 
@@ -302,6 +304,7 @@ function supplier(input, partial = false) {
 module.exports = { BusinessError, fail, object, text, id, owner, version, page, draft, supplier };
 
 },
+// Configura las rutas HTTP, la autenticación y el manejo de errores.
 "./app": function(module,exports,require){
 "use strict";
 const express = require("express");
@@ -384,11 +387,10 @@ function createApp({ store, workflow, identity, business, access, config = {} })
   app.get("/health", (req, res) =>
     res.json({ mensaje: "Backend del Grupo 7 funcionando", estado: "OK" }),
   );
-  // Start reading the bounded body before any async middleware. The Lambda
-  // adapter marks the incoming stream complete after Express yields.
+  // Lee el cuerpo antes de ceder el control al adaptador de Lambda.
   app.use("/api/auth/login", express.json({ limit: "16kb" }));
   app.use(express.json({ limit: "100kb" }));
-  // Bound authentication work even when a token is missing or invalid.
+  // Limita los intentos antes de verificar la autenticación.
   app.use("/api", rate("api-ip", 300, 60, ip));
   app.use(
     "/api/auth/login",
@@ -426,7 +428,7 @@ function createApp({ store, workflow, identity, business, access, config = {} })
     }),
   );
   installPublicRoutes(app,{access},{asyncRoute,rate,ip});
-  // Recovery is deliberately not wired to password APIs until that flow is authorized.
+  // La recuperación de contraseña no está habilitada en esta API.
   app.use(
     "/api",
     authenticate,
@@ -474,8 +476,7 @@ function createApp({ store, workflow, identity, business, access, config = {} })
         applicant: req.usuario.email,
         applicantSub: req.usuario.sub,
       };
-      // Legacy clients have no retry key. They keep the existing one-POST/one-flow
-      // contract. Only explicitly keyed requests opt into execution lookup/reuse.
+      // Reutiliza una ejecución solo cuando el cliente conserva la clave de reintento.
       const previous =
         requestedKey === undefined ? null : await workflow.find(requestId);
       if (previous) {
@@ -532,7 +533,7 @@ function createApp({ store, workflow, identity, business, access, config = {} })
       const failed = ["FAILED", "TIMED_OUT", "ABORTED"].includes(
         execution.status,
       );
-      // Successful execution without the expected record is an observable failure.
+      // Un flujo terminado sin el registro esperado se informa como fallo.
       res.json({
         success: !failed && execution.status !== "SUCCEEDED",
         estado:
@@ -617,6 +618,7 @@ function createApp({ store, workflow, identity, business, access, config = {} })
 module.exports = { createApp };
 
 },
+// Autentica usuarios y consulta su identidad en Cognito.
 "./identity": function(module,exports,require){
 "use strict";
 const { CognitoJwtVerifier } = require("aws-jwt-verify");
@@ -846,6 +848,7 @@ function createIdentity(config, { client, verifier } = {}) {
 module.exports = { createIdentity };
 
 },
+// Consulta solicitudes y guarda dictámenes con condiciones de estado.
 "./repository": function(module,exports,require){
 "use strict";
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
@@ -1072,6 +1075,7 @@ function createStore(config, { client } = {}) {
 module.exports = { createStore, cursorEncode, cursorDecode };
 
 },
+// Inicia y consulta el registro de solicitudes en Step Functions.
 "./workflow": function(module,exports,require){
 "use strict";
 const {
@@ -1098,8 +1102,7 @@ function createWorkflow(config, { client } = {}) {
       const execution = await sfn.send(
         new DescribeExecutionCommand({ executionArn: executionArn(id) }),
       );
-      // The existing workflow catches errors in a terminal Pass state.
-      // AWS can therefore report SUCCEEDED while the application output failed.
+      // Revisa la salida del flujo, que puede contener un fallo aunque AWS indique éxito.
       if (execution.status === "SUCCEEDED" && execution.output) {
         let output;
         try { output = JSON.parse(execution.output); }
@@ -1150,11 +1153,11 @@ function createWorkflow(config, { client } = {}) {
 module.exports = { createWorkflow };
 
 },
+// Limita peticiones dentro de cada proceso de la API.
 "./rate-limit": function(module,exports,require){
 "use strict";
 
-// Secondary protection per Node/Lambda execution environment. API Gateway remains
-// the shared throttle. This module does not claim cross-instance IP limiting.
+// Los contadores son locales al proceso; el límite compartido depende de API Gateway.
 function createMemoryLimiter({ now = Date.now, maxEntries = 10000 } = {}) {
   const entries = new Map();
   let lastCleanup = 0;
@@ -1185,12 +1188,12 @@ function createMemoryLimiter({ now = Date.now, maxEntries = 10000 } = {}) {
 module.exports = { createMemoryLimiter };
 
 },
+// Expone las operaciones de borradores, proveedores y cuentas.
 "./online-routes": function(module,exports,require){
 "use strict";
 const { createHash } = require("node:crypto");
 const C = require("./contracts.cjs");
-// DynamoDB maps do not preserve property order. SFN idempotency compares input
-// bytes, so freeze one canonical JSON order before starting or comparing a draft.
+// Ordena el JSON para comparar el mismo envío sin depender del orden de las propiedades.
 const canonical = value => Array.isArray(value) ? value.map(canonical) : value && typeof value === "object"
   ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])])) : value;
 const unavailable = () => { throw Object.assign(new Error("El servicio online requiere BUSINESS_TABLE y permisos AWS configurados."), { status: 503 }); };
@@ -1337,6 +1340,7 @@ function installPrivateRoutes(app, { business, access, store, workflow, config }
 module.exports = { installPublicRoutes, installPrivateRoutes };
 
 },
+// Guarda borradores y proveedores con control de propietario y versión.
 "./business-store": function(module,exports,require){
 "use strict";
 const { randomUUID, createHash } = require("node:crypto");
@@ -1514,6 +1518,7 @@ function createBusinessStore(config = {}, { client, now = () => new Date().toISO
 module.exports = { createBusinessStore, cursorEncode, cursorDecode };
 
 },
+// Gestiona el registro de cuentas y la asignación de roles.
 "./access-service": function(module,exports,require){
 "use strict";
 const { randomUUID } = require("node:crypto");
@@ -1550,9 +1555,7 @@ function decode(cursor) {
   } catch { throw failure(400, "Cursor inválido."); }
 }
 function createAccessService(config, { identity, client, clock = () => Date.now(), uuid = randomUUID } = {}) {
-  // Lambda executions are bounded by 15 minutes. A crashed worker retains the
-  // operation for 16 minutes before another invocation can resume it. This is
-  // exclusion/recovery, not an atomic transaction across Cognito and DynamoDB.
+  // El bloqueo de 16 minutos permite recuperar altas interrumpidas sin aplicar el rol a la vez.
   const workerLeaseMs = 16 * 60 * 1000;
   const table = config.businessTable || config.BUSINESS_TABLE;
   const enabled = config.registrationEnabled === true || config.registrationEnabled === "true" || config.REGISTRATION_ENABLED === "true";
@@ -1580,7 +1583,7 @@ function createAccessService(config, { identity, client, clock = () => Date.now(
       const email = emailOf(input.email), password = input.password;
       if (typeof password !== "string" || !password || password.length > 256) throw failure(400, "Contraseña inválida.");
       const name = input.name === undefined ? email : C.text(input.name, 150, "name");
-      // Confirm that the provisioned business table is accessible before Cognito creates an account.
+      // Comprueba el almacenamiento antes de crear la cuenta.
       await send(new GetCommand({ TableName: table, Key: { pk: PK, sk: "CONFIG" }, ConsistentRead: true }));
       let result;
       try { result = await identity.signUp({ email, password, name }); }
@@ -1608,8 +1611,7 @@ function createAccessService(config, { identity, client, clock = () => Date.now(
       catch { throw failure(400, "No se pudo confirmar el correo con ese código."); }
       if (!confirmed(directory) || directory.email !== email) throw failure(400, "El correo todavía no está verificado.");
       const record = await get(directory.sub);
-      // Recover a signup whose Cognito creation succeeded but ledger write failed.
-      // Existing business or administrative accounts must never be locked by this public endpoint.
+      // Recupera altas incompletas sin alterar cuentas comerciales o administrativas existentes.
       if (!record && !directory.isAdmin && !directory.roles?.length) {
         const now = new Date().toISOString();
         try {
@@ -1720,9 +1722,7 @@ function createAccessService(config, { identity, client, clock = () => Date.now(
         if (existing.worker && existing.leaseUntil > clock())
           throw failure(409, "La aprobación sigue en curso. No se iniciaron cambios adicionales.");
       }
-      // Review data must still identify the same confirmed account. A pending
-      // email change is refreshed by confirm(), increments version and requires
-      // the administrator to review it again before any group mutation.
+      // Comprueba que la revisión siga correspondiendo a la cuenta y al correo confirmados.
       let directory;
       try { directory = await identity.getDirectoryUser(record.username || sub); }
       catch { throw failure(503, "No se pudo verificar la cuenta que se va a aprobar."); }
@@ -1758,9 +1758,7 @@ function createAccessService(config, { identity, client, clock = () => Date.now(
       }
       try { await identity.assignBusinessRole(record.username || sub, role, sub, record.email); }
       catch {
-        // An explicit assignment failure has returned to this worker. Release
-        // only its lease so the same frozen operation can be retried. A crash
-        // or ambiguous final ledger failure instead leaves the lease to expire.
+        // Libera solo este bloqueo cuando la asignación falla y permite reintentar la misma operación.
         try {
           await send(new UpdateCommand({ TableName: table, Key: keyOf(sub),
             ConditionExpression: "#s = :applying AND #v = :version AND #op.id = :operation AND #op.#worker = :worker",
@@ -1808,6 +1806,7 @@ function load(id) {
   bundledModules[id](module,module.exports,load);
   return module.exports;
 }
+// Conecta la API con sus clientes y configuración de ejecución.
 function createRuntimeApp() {
   const require = load;
 "use strict";
@@ -1872,7 +1871,7 @@ app.use((req,res,next)=>{
     return res.status(503).json({success:false,mensaje:"El backend no esta configurado correctamente. Revisa las variables requeridas sin compartir secretos."});
   }
 });
-// Helpers for dependency-injected tests; they are not HTTP endpoints.
+// Expone módulos internos para probarlos con dependencias simuladas.
 Object.defineProperty(app,"internals",{value:Object.freeze({
   ...load("./app"),...load("./identity"),...load("./repository"),
   ...load("./workflow"),...load("./rate-limit"),...load("./access-service"),

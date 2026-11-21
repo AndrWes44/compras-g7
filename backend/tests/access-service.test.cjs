@@ -1,3 +1,4 @@
+// Prueba el alta de cuentas y la asignación de roles con servicios simulados.
 "use strict";
 const { test } = require("node:test");
 const assert = require("node:assert/strict");

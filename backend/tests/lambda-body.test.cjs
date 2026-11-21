@@ -1,3 +1,4 @@
+// Comprueba la lectura de cuerpos HTTP en el adaptador de Lambda.
 "use strict";
 const { test } = require("node:test");
 const assert = require("node:assert/strict");

@@ -1,10 +1,11 @@
+// Crea la tabla de solicitudes en DynamoDB Local para desarrollo.
 const {
     DynamoDBClient,
     CreateTableCommand,
     ListTablesCommand
 } = require('@aws-sdk/client-dynamodb');
 
-// Conexión exclusiva con DynamoDB Local
+// Conecta solo con la instancia local.
 const client = new DynamoDBClient({
     region: 'us-east-2',
     endpoint: 'http://127.0.0.1:8000',

@@ -1,15 +1,9 @@
-/*
-AURA G7 - PRUEBAS DEL BACKEND PARA PEGAR
-Crea backend/tests/backend.test.cjs y pega TODO este TXT.
-Desde la carpeta backend ejecuta: node --test tests/backend.test.cjs
-Los datos y servicios simulados se limitan a este archivo de pruebas.
-No se crean solicitudes AWS ni se usan contrasenas reales.
-*/
+// Prueba contratos, rutas y persistencia con dependencias simuladas.
 "use strict";
 const nativeRequire=require;
 const server=nativeRequire("../src/server.js");
 const i=server.internals;
-if(!i) throw Error("Primero pega BACKEND_PARA_PEGAR.txt completo en backend/src/server.js.");
+if(!i) throw Error("No se pudieron cargar los módulos internos del backend.");
 const dependencies={
   "../backend/src/app":{createApp:i.createApp},
   "../backend/src/contracts.cjs":i.contracts,
@@ -19,6 +13,7 @@ const dependencies={
   "../backend/src/rate-limit":{createMemoryLimiter:i.createMemoryLimiter}
 };
 const testModules={
+// Comprueba las rutas y los permisos principales de la API.
 './backend.test.cjs': function(module,exports,require){
 const { test } = require("node:test"),
   assert = require("node:assert/strict");
@@ -299,6 +294,7 @@ test("respuesta 429 con Retry-After en API; contador de prueba explícito", () =
   }));
 
 },
+// Comprueba los formatos de datos aceptados por los clientes.
 './compatibility.test.cjs': function(module,exports,require){
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
@@ -417,6 +413,7 @@ test("contador local vence y falla cerrado ante exceso de claves", async () => {
 });
 
 },
+// Comprueba las reglas de validación del contrato.
 './contracts.test.cjs': function(module,exports,require){
 const { test } = require("node:test"),
   assert = require("node:assert/strict"),
@@ -468,6 +465,7 @@ test("regla exacta de monto y artículos", () => {
 });
 
 },
+// Prueba la autenticación con un cliente simulado.
 './identity.test.cjs': function(module,exports,require){
 const { test } = require("node:test"),
   assert = require("node:assert/strict");
@@ -581,6 +579,7 @@ test("Cognito revocado no permite autenticar", async () => {
 });
 
 },
+// Comprueba los controles de acceso y la protección de entradas.
 './security-regressions.test.cjs': function(module,exports,require){
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
@@ -648,6 +647,7 @@ test("cursor sin clave primaria válida devuelve validación 400 antes de Dynamo
 });
 
 },
+// Prueba consultas y escrituras de solicitudes.
 './storage.test.cjs': function(module,exports,require){
 const { test } = require("node:test"),
   assert = require("node:assert/strict");
@@ -760,6 +760,7 @@ test("SFN reintento cerrado conserva input y detecta conflicto", async () => {
 });
 
 },
+// Prepara el servidor y los servicios simulados de las pruebas.
 './harness.cjs': function(module,exports,require){
 "use strict";
 const { createApp } = require("../backend/src/app");
@@ -880,7 +881,7 @@ function fixture() {
       if (!state.failWrite && !state.delayRegistration)
         requests.set(payload.requestId, {
           ...payload,
-          // The active writer does not persist applicantSub yet. Exercise the legacy email fallback.
+          // Comprueba la compatibilidad por correo con registros antiguos sin applicantSub.
           applicantSub: undefined,
           status: "PENDING",
           createdAt: new Date().toISOString(),
