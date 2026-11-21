@@ -267,7 +267,7 @@ function renderRegistro() {
           </div>
         </div>
 
-        <form onsubmit="handleRegistroSubmit(event)" class="space-y-4">
+        <form onsubmit="handleRegistroSubmit(event)" novalidate class="space-y-4">
           <div>
             <label class="block text-xs font-medium text-slate-300 mb-1">Nombre Completo</label>
             <input type="text" id="reg-name" required placeholder="Ing. Carlos Mendoza" class="w-full px-3.5 py-2.5 bg-aura-input border border-aura-border rounded-lg text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500">
@@ -281,9 +281,18 @@ function renderRegistro() {
 
           <div>
             <label class="block text-xs font-medium text-slate-300 mb-1">Contraseña</label>
-            <input type="password" id="reg-password" required minlength="8" placeholder="Mínimo 8 car., Mayús, Núm, Símbolo" class="w-full px-3.5 py-2.5 bg-aura-input border border-aura-border rounded-lg text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500">
-            <p class="text-[10px] text-slate-400 mt-1">Debe incluir al menos 8 caracteres, una mayúscula, una minúscula, un número y un símbolo.</p>
+            <input type="password" id="reg-password" required oninput="actualizarChecklistPassword(this.value)" placeholder="Crea una contraseña segura" class="w-full px-3.5 py-2.5 bg-aura-input border border-aura-border rounded-lg text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500">
+            <div id="reg-password-checklist" class="mt-2 p-3 rounded-xl bg-slate-900/70 border border-aura-border space-y-1.5 text-[11px]">
+              <p class="text-[10px] uppercase tracking-wider font-semibold text-slate-400 mb-1">Requisitos de contraseña</p>
+              <div id="req-len" class="flex items-center gap-2 text-slate-400"><i class="fa-regular fa-circle text-[10px]"></i><span>Mínimo 8 caracteres</span></div>
+              <div id="req-upper" class="flex items-center gap-2 text-slate-400"><i class="fa-regular fa-circle text-[10px]"></i><span>Al menos una letra mayúscula (A-Z)</span></div>
+              <div id="req-lower" class="flex items-center gap-2 text-slate-400"><i class="fa-regular fa-circle text-[10px]"></i><span>Al menos una letra minúscula (a-z)</span></div>
+              <div id="req-num" class="flex items-center gap-2 text-slate-400"><i class="fa-regular fa-circle text-[10px]"></i><span>Al menos un número (0-9)</span></div>
+              <div id="req-sym" class="flex items-center gap-2 text-slate-400"><i class="fa-regular fa-circle text-[10px]"></i><span>Al menos un símbolo (ej. @$!%*?&)</span></div>
+            </div>
           </div>
+
+          <div id="reg-error-box" class="hidden p-3 rounded-lg bg-red-500/15 border border-red-500/40 text-red-300 text-xs"></div>
 
           <button type="submit" class="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg text-sm shadow-lg transition-all flex items-center justify-center gap-2">
             <span>Registrar y Recibir Código</span>
@@ -3304,26 +3313,82 @@ window.handleGuardarProveedor = async function(e, isEdit) {
 };
 
 // ----------------- CONTROLADORES: REGISTRO Y ADMIN DE USUARIOS -----------------
+function evaluarRequisitosPassword(password = '') {
+  return {
+    len: password.length >= 8,
+    upper: /[A-Z]/.test(password),
+    lower: /[a-z]/.test(password),
+    num: /[0-9]/.test(password),
+    sym: /[^A-Za-z0-9]/.test(password)
+  };
+}
+
+function mostrarErrorRegistro(mensaje) {
+  const box = document.getElementById('reg-error-box');
+  if (!box) return;
+  if (!mensaje) {
+    box.classList.add('hidden');
+    box.textContent = '';
+    return;
+  }
+  box.textContent = mensaje;
+  box.classList.remove('hidden');
+}
+
+window.actualizarChecklistPassword = function(password) {
+  const checks = evaluarRequisitosPassword(password || '');
+  const items = [
+    { id: 'req-len', ok: checks.len },
+    { id: 'req-upper', ok: checks.upper },
+    { id: 'req-lower', ok: checks.lower },
+    { id: 'req-num', ok: checks.num },
+    { id: 'req-sym', ok: checks.sym }
+  ];
+  items.forEach(({ id, ok }) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.className = `flex items-center gap-2 ${ok ? 'text-emerald-400 font-medium' : 'text-slate-400'}`;
+    const icon = el.querySelector('i');
+    if (icon) {
+      icon.className = ok ? 'fa-solid fa-circle-check text-[10px] text-emerald-400' : 'fa-regular fa-circle text-[10px]';
+    }
+  });
+  mostrarErrorRegistro('');
+};
+
 window.handleRegistroSubmit = async function(e) {
   e.preventDefault();
+  mostrarErrorRegistro('');
   const name = document.getElementById('reg-name').value.trim();
   const email = document.getElementById('reg-email').value.trim().toLowerCase();
   const password = document.getElementById('reg-password').value;
 
   if (!name || !email || !password) {
-    showToast('Por favor completa todos los campos obligatorios.', 'warning');
+    const msg = 'Por favor completa nombre, correo y contraseña.';
+    mostrarErrorRegistro(msg);
+    showToast(msg, 'warning');
     return;
   }
 
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    const msg = 'Ingresa un correo electrónico válido.';
+    mostrarErrorRegistro(msg);
+    showToast(msg, 'warning');
+    return;
+  }
+
+  const checks = evaluarRequisitosPassword(password);
   const faltantes = [];
-  if (password.length < 8) faltantes.push('mínimo 8 caracteres');
-  if (!/[A-Z]/.test(password)) faltantes.push('una mayúscula');
-  if (!/[a-z]/.test(password)) faltantes.push('una minúscula');
-  if (!/[0-9]/.test(password)) faltantes.push('un número');
-  if (!/[^A-Za-z0-9]/.test(password)) faltantes.push('un símbolo');
+  if (!checks.len) faltantes.push('mínimo 8 caracteres');
+  if (!checks.upper) faltantes.push('una mayúscula');
+  if (!checks.lower) faltantes.push('una minúscula');
+  if (!checks.num) faltantes.push('un número');
+  if (!checks.sym) faltantes.push('un símbolo');
 
   if (faltantes.length > 0) {
-    showToast(`Contraseña inválida. Falta incluir: ${faltantes.join(', ')}.`, 'warning');
+    const msg = `La contraseña no cumple los requisitos. Falta: ${faltantes.join(', ')}.`;
+    mostrarErrorRegistro(msg);
+    showToast(msg, 'warning');
     return;
   }
 
@@ -3348,6 +3413,7 @@ window.handleRegistroSubmit = async function(e) {
     const finalMsg = isPasswordErr
       ? 'La contraseña no cumple con los requisitos de seguridad (mínimo 8 caracteres, mayúscula, minúscula, número y símbolo).'
       : `Error al registrar usuario: ${rawMsg}`;
+    mostrarErrorRegistro(finalMsg);
     showToast(finalMsg, 'warning');
   } finally {
     if (submitBtn) {
